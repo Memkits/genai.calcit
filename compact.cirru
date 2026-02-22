@@ -1,155 +1,139 @@
 
 {} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |genai)
   :configs $ {} (:init-fn |genai.main/main!) (:reload-fn |genai.main/reload!) (:version |0.0.1)
-    :modules $ [] |respo.calcit/ |lilac/ |memof/ |respo-ui.calcit/ |reel.calcit/
+    :modules $ [] |lilac/ |memof/
   :entries $ {}
   :files $ {}
-    |genai.comp.container $ %{} :FileEntry
-      :defs $ {}
-        |comp-container $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            defcomp comp-container (reel)
-              let
-                  store $ :store reel
-                  states $ :states store
-                  cursor $ or (:cursor states) ([])
-                  state $ or (:data states)
-                    {} $ :content "\""
-                div
-                  {} $ :class-name (str-spaced css/preset css/global css/row)
-                  textarea $ {}
-                    :value $ :content state
-                    :placeholder "\"Content"
-                    :class-name $ str-spaced css/expand css/textarea
-                    :style $ {} (:height 320)
-                    :on-input $ fn (e d!)
-                      d! cursor $ assoc state :content (:value e)
-                  =< 8 nil
-                  div
-                    {} $ :class-name css/expand
-                    <> "|This is some content with `code`"
-                    =< |8px nil
-                    button $ {} (:class-name css/button) (:inner-text "\"Run")
-                      :on-click $ fn (e d!)
-                        println $ :content state
-                  when dev? $ comp-reel (>> states :reel) reel ({})
-          :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
-        :code $ quote
-          ns genai.comp.container $ :require (respo-ui.css :as css)
-            respo.css :refer $ defstyle
-            respo.core :refer $ defcomp defeffect <> >> div button textarea span input
-            respo.comp.space :refer $ =<
-            reel.comp.reel :refer $ comp-reel
-            genai.config :refer $ dev?
-        :examples $ []
-    |genai.config $ %{} :FileEntry
-      :defs $ {}
-        |dev? $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            def dev? $ = "\"dev" (get-env "\"mode" "\"release")
-          :examples $ []
-        |site $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            def site $ {} (:storage-key "\"workflow")
-          :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
-        :code $ quote (ns genai.config)
-        :examples $ []
     |genai.main $ %{} :FileEntry
       :defs $ {}
-        |*reel $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            defatom *reel $ -> reel-schema/reel (assoc :base schema/store) (assoc :store schema/store)
-          :examples $ []
-        |dispatch! $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            defn dispatch! (op)
-              when
-                and config/dev? $ not= op :states
-                js/console.log "\"Dispatch:" op
-              reset! *reel $ reel-updater updater @*reel op
-          :examples $ []
         |main! $ %{} :CodeEntry (:doc |)
           :code $ quote
-            defn main! ()
-              println "\"Running mode:" $ if config/dev? "\"dev" "\"release"
-              if config/dev? $ load-console-formatter!
-              render-app!
-              add-watch *reel :changes $ fn (reel prev) (render-app!)
-              listen-devtools! |k dispatch!
-              js/window.addEventListener |beforeunload $ fn (event) (persist-storage!)
-              js/window.addEventListener |visibilitychange $ fn (event)
-                if (= "\"hidden" js/document.visibilityState) (persist-storage!)
-              flipped js/setInterval 60000 persist-storage!
+            defn main! () (hint-fn async)
               let
-                  raw $ js/localStorage.getItem (:storage-key config/site)
-                when (some? raw)
-                  dispatch! $ :: :hydrate-storage (parse-cirru-edn raw)
-              println "|App started."
-          :examples $ []
-        |mount-target $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            def mount-target $ js/document.querySelector |.app
-          :examples $ []
-        |persist-storage! $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            defn persist-storage! ()
-              println "\"Saved at" $ .!toISOString (new js/Date)
-              js/localStorage.setItem (:storage-key config/site)
-                format-cirru-edn $ :store @*reel
+                  api-key $ or
+                    .-GEMINI_API_KEY $ .-env js-process
+                    do (println "|Error: GEMINI_API_KEY not set") (js/process.exit 1)
+                  base-url $ .-GEMINI_BASE_URL (.-env js-process)
+                  client $ if (some? base-url) (sdk/new-client-with-base-url api-key base-url) (sdk/new-client api-key)
+                  params $ %{} sdk/CreateParams (:model |gemini-2.5-flash) (:input "|Explain how AI works in a few words.") (:system-instruction nil) (:previous-interaction-id nil) (:store nil) (:generation-config nil) (:tools nil) (:response-modalities nil) (:response-format nil) (:response-mime-type nil)
+                  interaction $ js-await (sdk/interactions-create! client params)
+                  result $ sdk/extract-outputs interaction
+                println |Response: $ :text result
+                println |Status: $ :status result
+                println |Interaction-id: $ :interaction-id result
           :examples $ []
         |reload! $ %{} :CodeEntry (:doc |)
           :code $ quote
-            defn reload! () $ if (nil? build-errors)
-              do (remove-watch *reel :changes) (clear-cache!)
-                add-watch *reel :changes $ fn (reel prev) (render-app!)
-                reset! *reel $ refresh-reel @*reel schema/store updater
-                hud! "\"ok~" "\"Ok"
-              hud! "\"error" build-errors
-          :examples $ []
-        |render-app! $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            defn render-app! () $ render! mount-target (comp-container @*reel) dispatch!
+            defn reload! () $ println |reloaded
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
-          ns genai.main $ :require
-            respo.core :refer $ render! clear-cache!
-            genai.comp.container :refer $ comp-container
-            genai.updater :refer $ updater
-            genai.schema :as schema
-            reel.util :refer $ listen-devtools!
-            reel.core :refer $ reel-updater refresh-reel
-            reel.schema :as reel-schema
-            genai.config :as config
-            "\"./calcit.build-errors" :default build-errors
-            "\"bottom-tip" :default hud!
+          ns genai.main $ :require (genai.sdk :as sdk) (|node:process :default js-process)
         :examples $ []
-    |genai.schema $ %{} :FileEntry
+    |genai.sdk $ %{} :FileEntry
       :defs $ {}
-        |store $ %{} :CodeEntry (:doc |)
-          :code $ quote
-            def store $ {}
-              :states $ {}
-                :cursor $ []
+        |CreateParams $ %{} :CodeEntry (:doc |)
+          :code $ quote (defrecord CreateParams :model :input :system-instruction :previous-interaction-id :store :generation-config :tools :response-modalities :response-format :response-mime-type)
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
-        :code $ quote (ns genai.schema)
-        :examples $ []
-    |genai.updater $ %{} :FileEntry
-      :defs $ {}
-        |updater $ %{} :CodeEntry (:doc |)
+        |GenerationConfig $ %{} :CodeEntry (:doc |)
+          :code $ quote (defrecord GenerationConfig :temperature :max-output-tokens :top-p :top-k :candidate-count :stop-sequences :response-mime-type)
+          :examples $ []
+        |ImageContent $ %{} :CodeEntry (:doc |)
+          :code $ quote (defrecord ImageContent :data :mime-type :uri)
+          :examples $ []
+        |Interaction $ %{} :CodeEntry (:doc |)
+          :code $ quote (defrecord Interaction :id :status :outputs :model :input :usage-metadata :created-at :updated-at)
+          :examples $ []
+        |TextContent $ %{} :CodeEntry (:doc |)
+          :code $ quote (defrecord TextContent :text)
+          :examples $ []
+        |Turn $ %{} :CodeEntry (:doc |)
+          :code $ quote (defrecord Turn :role :content)
+          :examples $ []
+        |extract-outputs $ %{} :CodeEntry (:doc |)
           :code $ quote
-            defn updater (store op op-id op-time)
-              tag-match op
-                  :states cursor s
-                  update-states store cursor s
-                (:hydrate-storage data) data
-                _ $ do (eprintln "\"unknown op:" op) store
+            defn extract-outputs (interaction)
+              let
+                  outputs $ either (.-outputs interaction) (js-array)
+                  text-out $ -> outputs
+                    .!find $ fn (o & args) (= (.-type o) |text)
+                  fn-calls $ -> outputs
+                    .!filter $ fn (o & args) (= (.-type o) |function_call)
+                    .!map $ fn (o & args)
+                      js-object (:name $ .-name o) (:arguments $ .-arguments o) (:id $ .-id o)
+                    , to-calcit-data
+                {}
+                  :text $ if (some? text-out) (.-text text-out) nil
+                  :function-calls fn-calls
+                  :interaction-id $ .-id interaction
+                  :status $ .-status interaction
+          :examples $ []
+        |input->js $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn input->js (v)
+              if (string? v)
+                js-array $ js-object (:type |text) (:text v)
+                if (map? v)
+                  js-object (:type |text) (:text $ :content v)
+                  v
+          :examples $ []
+        |interactions-cancel! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn interactions-cancel! (client id) (hint-fn async)
+              .!cancel (.-interactions client) id
+          :examples $ []
+        |interactions-create! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn interactions-create! (client params) (hint-fn async)
+              .!create (.-interactions client) (params->js params)
+          :examples $ []
+        |interactions-delete! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn interactions-delete! (client id) (hint-fn async)
+              .!delete (.-interactions client) id
+          :examples $ []
+        |interactions-get! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn interactions-get! (client id) (hint-fn async)
+              .!get (.-interactions client) id
+          :examples $ []
+        |new-client $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn new-client (api-key)
+              new GoogleGenAI $ js-object (:apiKey api-key)
+          :examples $ []
+        |new-client-with-base-url $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn new-client-with-base-url (api-key base-url)
+              new GoogleGenAI $ js-object (:apiKey api-key)
+                :httpOptions $ js-object (:baseUrl base-url)
+          :examples $ []
+        |params->js $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn params->js (p)
+              let
+                  model $ :model p
+                  input $ :input p
+                  prev-id $ :previous-interaction-id p
+                  sys $ :system-instruction p
+                  gen-cfg $ :generation-config p
+                  tools-v $ :tools p
+                js-object (:model model)
+                  :input $ input->js input
+                  :previous_interaction_id $ or prev-id js/undefined
+                  :system_instruction $ or sys js/undefined
+                  :store $ or (:store p) js/undefined
+                  :config $ if (some? gen-cfg)
+                    js-object
+                      :temperature $ or (:temperature gen-cfg) js/undefined
+                      :maxOutputTokens $ or (:max-output-tokens gen-cfg) js/undefined
+                      :topP $ or (:top-p gen-cfg) js/undefined
+                      :topK $ or (:top-k gen-cfg) js/undefined
+                    , js/undefined
+                  :tools $ if (some? tools-v) (to-js-data tools-v) js/undefined
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
-          ns genai.updater $ :require
-            respo.cursor :refer $ update-states
+          ns genai.sdk $ :require
+            |@google/genai :refer $ GoogleGenAI
         :examples $ []
