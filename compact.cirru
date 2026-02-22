@@ -1,10 +1,10 @@
 
-{} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |app)
-  :configs $ {} (:init-fn |app.main/main!) (:reload-fn |app.main/reload!) (:version |0.0.1)
+{} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |genai)
+  :configs $ {} (:init-fn |genai.main/main!) (:reload-fn |genai.main/reload!) (:version |0.0.1)
     :modules $ [] |respo.calcit/ |lilac/ |memof/ |respo-ui.calcit/ |reel.calcit/
   :entries $ {}
   :files $ {}
-    |app.comp.container $ %{} :FileEntry
+    |genai.comp.container $ %{} :FileEntry
       :defs $ {}
         |comp-container $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -36,14 +36,14 @@
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
-          ns app.comp.container $ :require (respo-ui.css :as css)
+          ns genai.comp.container $ :require (respo-ui.css :as css)
             respo.css :refer $ defstyle
             respo.core :refer $ defcomp defeffect <> >> div button textarea span input
             respo.comp.space :refer $ =<
             reel.comp.reel :refer $ comp-reel
-            app.config :refer $ dev?
+            genai.config :refer $ dev?
         :examples $ []
-    |app.config $ %{} :FileEntry
+    |genai.config $ %{} :FileEntry
       :defs $ {}
         |dev? $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -54,9 +54,9 @@
             def site $ {} (:storage-key "\"workflow")
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
-        :code $ quote (ns app.config)
+        :code $ quote (ns genai.config)
         :examples $ []
-    |app.main $ %{} :FileEntry
+    |genai.main $ %{} :FileEntry
       :defs $ {}
         |*reel $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -114,19 +114,19 @@
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
-          ns app.main $ :require
+          ns genai.main $ :require
             respo.core :refer $ render! clear-cache!
-            app.comp.container :refer $ comp-container
-            app.updater :refer $ updater
-            app.schema :as schema
+            genai.comp.container :refer $ comp-container
+            genai.updater :refer $ updater
+            genai.schema :as schema
             reel.util :refer $ listen-devtools!
             reel.core :refer $ reel-updater refresh-reel
             reel.schema :as reel-schema
-            app.config :as config
+            genai.config :as config
             "\"./calcit.build-errors" :default build-errors
             "\"bottom-tip" :default hud!
         :examples $ []
-    |app.schema $ %{} :FileEntry
+    |genai.schema $ %{} :FileEntry
       :defs $ {}
         |store $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -135,9 +135,9 @@
                 :cursor $ []
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
-        :code $ quote (ns app.schema)
+        :code $ quote (ns genai.schema)
         :examples $ []
-    |app.updater $ %{} :FileEntry
+    |genai.updater $ %{} :FileEntry
       :defs $ {}
         |updater $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -150,6 +150,6 @@
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
-          ns app.updater $ :require
+          ns genai.updater $ :require
             respo.cursor :refer $ update-states
         :examples $ []
