@@ -15,7 +15,7 @@
                     do (println "|Error: GEMINI_API_KEY not set") (js/process.exit 1)
                   base-url $ .-GEMINI_BASE_URL (.-env js-process)
                   client $ if (some? base-url) (sdk/new-client-with-base-url api-key base-url) (sdk/new-client api-key)
-                  params $ %{} sdk/CreateParams (:model |gemini-2.5-flash) (:input "|Explain how AI works in a few words.") (:system-instruction nil) (:previous-interaction-id nil) (:store nil) (:generation-config nil) (:tools nil) (:response-modalities nil) (:response-format nil) (:response-mime-type nil)
+                  params $ %{}? sdk/CreateParams (:model |gemini-2.5-flash) (:input "|Explain how AI works in a few words.")
                   interaction $ js-await (sdk/interactions-create! client params)
                   result $ sdk/extract-outputs interaction
                 println |Response: $ :text result
@@ -37,7 +37,16 @@
             defenum ContentOutput (:text TextContent) (:image ImageContent) (:thought ThoughtContent) (:function-call FunctionCallContent) (:function-result FunctionResultContent)
           :examples $ []
         |CreateParams $ %{} :CodeEntry (:doc |)
-          :code $ quote (defrecord CreateParams :model :input :system-instruction :previous-interaction-id :store :generation-config :tools :response-modalities :response-format :response-mime-type)
+          :code $ quote
+            defstruct CreateParams (:model :string) (:input :dynamic)
+              :system-instruction $ :: :optional :string
+              :previous-interaction-id $ :: :optional :string
+              :store $ :: :optional :bool
+              :generation-config $ :: :optional GenerationConfig
+              :tools $ :: :optional :list
+              :response-modalities $ :: :optional :list
+              :response-format $ :: :optional :dynamic
+              :response-mime-type $ :: :optional :string
           :examples $ []
         |FunctionCallContent $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -45,12 +54,20 @@
           :examples $ []
         |FunctionResultContent $ %{} :CodeEntry (:doc |)
           :code $ quote
-            defstruct FunctionResultContent (:call-id :string) (:result :any)
+            defstruct FunctionResultContent (:call-id :string) (:result :dynamic)
               :is-error $ :: :optional :bool
               :name $ :: :optional :string
           :examples $ []
         |GenerationConfig $ %{} :CodeEntry (:doc |)
-          :code $ quote (defrecord GenerationConfig :temperature :max-output-tokens :top-p :top-k :candidate-count :stop-sequences :response-mime-type)
+          :code $ quote
+            defstruct GenerationConfig
+              :temperature $ :: :optional :number
+              :max-output-tokens $ :: :optional :number
+              :top-p $ :: :optional :number
+              :top-k $ :: :optional :number
+              :candidate-count $ :: :optional :number
+              :stop-sequences $ :: :optional :list
+              :response-mime-type $ :: :optional :string
           :examples $ []
         |ImageContent $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -70,7 +87,7 @@
           :examples $ []
         |InteractionStatus $ %{} :CodeEntry (:doc |)
           :code $ quote
-            defenum InteractionStatus (:completed :nil) (:failed :nil) (:in-progress :nil) (:cancelled :nil) (:incomplete :nil) (:requires-action :nil)
+            defenum InteractionStatus (:completed :dynamic) (:failed :dynamic) (:in-progress :dynamic) (:cancelled :dynamic) (:incomplete :dynamic) (:requires-action :dynamic)
           :examples $ []
         |TextContent $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -86,7 +103,7 @@
           :code $ quote
             defstruct Turn
               :role $ :: :optional :string
-              :content :any
+              :content :dynamic
           :examples $ []
         |Usage $ %{} :CodeEntry (:doc |)
           :code $ quote
