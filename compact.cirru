@@ -32,23 +32,68 @@
         :examples $ []
     |genai.sdk $ %{} :FileEntry
       :defs $ {}
+        |ContentOutput $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defenum ContentOutput (:text TextContent) (:image ImageContent) (:thought ThoughtContent) (:function-call FunctionCallContent) (:function-result FunctionResultContent)
+          :examples $ []
         |CreateParams $ %{} :CodeEntry (:doc |)
           :code $ quote (defrecord CreateParams :model :input :system-instruction :previous-interaction-id :store :generation-config :tools :response-modalities :response-format :response-mime-type)
+          :examples $ []
+        |FunctionCallContent $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstruct FunctionCallContent (:id :string) (:name :string) (:arguments :map)
+          :examples $ []
+        |FunctionResultContent $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstruct FunctionResultContent (:call-id :string) (:result :any)
+              :is-error $ :: :optional :bool
+              :name $ :: :optional :string
           :examples $ []
         |GenerationConfig $ %{} :CodeEntry (:doc |)
           :code $ quote (defrecord GenerationConfig :temperature :max-output-tokens :top-p :top-k :candidate-count :stop-sequences :response-mime-type)
           :examples $ []
         |ImageContent $ %{} :CodeEntry (:doc |)
-          :code $ quote (defrecord ImageContent :data :mime-type :uri)
+          :code $ quote
+            defstruct ImageContent
+              :data $ :: :optional :string
+              :mime-type $ :: :optional :string
+              :uri $ :: :optional :string
           :examples $ []
         |Interaction $ %{} :CodeEntry (:doc |)
-          :code $ quote (defrecord Interaction :id :status :outputs :model :input :usage-metadata :created-at :updated-at)
+          :code $ quote
+            defstruct Interaction (:id :string) (:status InteractionStatus)
+              :outputs $ :: :optional :list
+              :model $ :: :optional :string
+              :created $ :: :optional :string
+              :updated $ :: :optional :string
+              :usage $ :: :optional Usage
+          :examples $ []
+        |InteractionStatus $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defenum InteractionStatus (:completed :nil) (:failed :nil) (:in-progress :nil) (:cancelled :nil) (:incomplete :nil) (:requires-action :nil)
           :examples $ []
         |TextContent $ %{} :CodeEntry (:doc |)
-          :code $ quote (defrecord TextContent :text)
+          :code $ quote
+            defstruct TextContent $ :text (:: :optional :string)
+          :examples $ []
+        |ThoughtContent $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstruct ThoughtContent
+              :signature $ :: :optional :string
+              :summary $ :: :optional :list
           :examples $ []
         |Turn $ %{} :CodeEntry (:doc |)
-          :code $ quote (defrecord Turn :role :content)
+          :code $ quote
+            defstruct Turn
+              :role $ :: :optional :string
+              :content :any
+          :examples $ []
+        |Usage $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstruct Usage
+              :input-tokens $ :: :optional :number
+              :output-tokens $ :: :optional :number
+              :total-tokens $ :: :optional :number
           :examples $ []
         |extract-outputs $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -56,11 +101,16 @@
               let
                   outputs $ either (.-outputs interaction) (js-array)
                   text-out $ -> outputs
-                    .!find $ fn (o & args) (= (.-type o) |text)
+                    .!find $ fn (o & args)
+                      = (.-type o) |text
                   fn-calls $ -> outputs
-                    .!filter $ fn (o & args) (= (.-type o) |function_call)
+                    .!filter $ fn (o & args)
+                      = (.-type o) |function_call
                     .!map $ fn (o & args)
-                      js-object (:name $ .-name o) (:arguments $ .-arguments o) (:id $ .-id o)
+                      js-object
+                        :name $ .-name o
+                        :arguments $ .-arguments o
+                        :id $ .-id o
                     , to-calcit-data
                 {}
                   :text $ if (some? text-out) (.-text text-out) nil
@@ -74,7 +124,8 @@
               if (string? v)
                 js-array $ js-object (:type |text) (:text v)
                 if (map? v)
-                  js-object (:type |text) (:text $ :content v)
+                  js-object (:type |text)
+                    :text $ :content v
                   v
           :examples $ []
         |interactions-cancel! $ %{} :CodeEntry (:doc |)
