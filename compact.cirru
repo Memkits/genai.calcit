@@ -1,6 +1,6 @@
 
 {} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |genai)
-  :configs $ {} (:init-fn |genai.main/main!) (:reload-fn |genai.main/reload!) (:version |0.0.1)
+  :configs $ {} (:init-fn |genai.main/main!) (:reload-fn |genai.main/reload!) (:version |0.0.2)
     :modules $ [] |lilac/ |memof/
   :entries $ {}
   :files $ {}
@@ -32,6 +32,17 @@
         :examples $ []
     |genai.sdk $ %{} :FileEntry
       :defs $ {}
+        |ContentConfig $ %{} :CodeEntry (:doc "|config struct for generateContent/generateContentStream, fields: model contents system-instruction thinking-config tools response-modalities response-mime-type abort-signal http-options")
+          :code $ quote
+            defstruct ContentConfig (:model :string) (:contents :dynamic)
+              :system-instruction $ :: :optional :string
+              :thinking-config $ :: :optional :dynamic
+              :tools $ :: :optional :list
+              :response-modalities $ :: :optional :list
+              :response-mime-type $ :: :optional :string
+              :abort-signal $ :: :optional :dynamic
+              :http-options $ :: :optional :dynamic
+          :examples $ []
         |ContentOutput $ %{} :CodeEntry (:doc |)
           :code $ quote
             defenum ContentOutput (:text TextContent) (:image ImageContent) (:thought ThoughtContent) (:function-call FunctionCallContent) (:function-result FunctionResultContent)
@@ -76,6 +87,14 @@
               :mime-type $ :: :optional :string
               :uri $ :: :optional :string
           :examples $ []
+        |ImageGenConfig $ %{} :CodeEntry (:doc "|config struct for generateImages, fields: model prompt number-of-images include-rai-reason abort-signal http-options")
+          :code $ quote
+            defstruct ImageGenConfig (:model :string) (:prompt :string)
+              :number-of-images $ :: :optional :number
+              :include-rai-reason $ :: :optional :bool
+              :abort-signal $ :: :optional :dynamic
+              :http-options $ :: :optional :dynamic
+          :examples $ []
         |Interaction $ %{} :CodeEntry (:doc |)
           :code $ quote
             defstruct Interaction (:id :string) (:status InteractionStatus)
@@ -112,6 +131,37 @@
               :output-tokens $ :: :optional :number
               :total-tokens $ :: :optional :number
           :examples $ []
+        |content-config->js $ %{} :CodeEntry (:doc "|converts ContentConfig struct to JS object for SDK calls, maps fields to camelCase JS properties")
+          :code $ quote
+            defn content-config->js (cfg)
+              let
+                  model $ :model cfg
+                  contents $ :contents cfg
+                  sys $ :system-instruction cfg
+                  thinking $ :thinking-config cfg
+                  tools-v $ :tools cfg
+                  modalities $ :response-modalities cfg
+                  mime-type $ :response-mime-type cfg
+                  signal $ :abort-signal cfg
+                  http-opts $ :http-options cfg
+                js-object (:model model) (:contents contents)
+                  :systemInstruction $ or sys js/undefined
+                  :config $ js-object
+                    :thinkingConfig $ or thinking js/undefined
+                    :tools $ if (some? tools-v) (to-js-data tools-v) js/undefined
+                    :responseModalities $ or modalities js/undefined
+                    :responseMimeType $ or mime-type js/undefined
+                    :abortSignal $ or signal js/undefined
+                    :httpOptions $ or http-opts js/undefined
+          :examples $ []
+        |extract-content-parts $ %{} :CodeEntry (:doc "|extracts candidates[0].content.parts from a non-streaming generateContent response")
+          :code $ quote
+            defn extract-content-parts (result) (-> result .-candidates .-0 .-content .-parts)
+          :examples $ []
+        |extract-image-bytes $ %{} :CodeEntry (:doc "|extracts base64 imageBytes from generatedImages[0].image of a generateImages response")
+          :code $ quote
+            defn extract-image-bytes (response) (-> response .-generatedImages .-0 .-image .-imageBytes)
+          :examples $ []
         |extract-outputs $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn extract-outputs (interaction)
@@ -134,6 +184,43 @@
                   :function-calls fn-calls
                   :interaction-id $ .-id interaction
                   :status $ .-status interaction
+          :examples $ []
+        |extract-stream-chunk $ %{} :CodeEntry (:doc "|extracts text and thinking? from a stream chunk, returns {:text :thinking?} map; handles optional chaining")
+          :code $ quote
+            defn extract-stream-chunk (chunk)
+              let
+                  part js/chunk.candidates?.[0]?.content?.parts?.[0]
+                  is-thinking? $ if (some? part) (.-thought part) false
+                  text $ if (some? part) (.-text part) (.-text chunk)
+                  fallback $ or text (-> chunk .?-promptFeedback .?-blockReason)
+                {} (:text fallback) (:thinking? is-thinking?)
+          :examples $ []
+        |generate-content! $ %{} :CodeEntry (:doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)")
+          :code $ quote
+            defn generate-content! (client cfg) (hint-fn async)
+              .!generateContent (.-models client) (content-config->js cfg)
+          :examples $ []
+        |generate-content-stream! $ %{} :CodeEntry (:doc "|async, calls models.generateContentStream with ContentConfig, returns stream for js-for-await")
+          :code $ quote
+            defn generate-content-stream! (client cfg) (hint-fn async)
+              .!generateContentStream (.-models client) (content-config->js cfg)
+          :examples $ []
+        |generate-images! $ %{} :CodeEntry (:doc "|async, calls models.generateImages with ImageGenConfig, returns image generation response")
+          :code $ quote
+            defn generate-images! (client cfg) (hint-fn async)
+              let
+                  model $ :model cfg
+                  prompt $ :prompt cfg
+                  signal $ :abort-signal cfg
+                  http-opts $ :http-options cfg
+                  num-images $ either (:number-of-images cfg) 1
+                  include-rai $ :include-rai-reason cfg
+                .!generateImages (.-models client)
+                  js-object (:model model) (:prompt prompt)
+                    :config $ js-object (:numberOfImages num-images)
+                      :includeRaiReason $ or include-rai js/undefined
+                      :httpOptions $ or http-opts js/undefined
+                      :signal $ or signal js/undefined
           :examples $ []
         |input->js $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -164,6 +251,53 @@
           :code $ quote
             defn interactions-get! (client id) (hint-fn async)
               .!get (.-interactions client) id
+          :examples $ []
+        |make-abort-signal $ %{} :CodeEntry (:doc "|creates AbortController, stores in *abort-control atom, returns signal; pass atom for external abort control")
+          :code $ quote
+            defn make-abort-signal (*abort-control)
+              let
+                  abort $ new js/AbortController
+                reset! *abort-control abort
+                .-signal abort
+          :examples $ []
+        |make-http-options $ %{} :CodeEntry (:doc "|creates httpOptions JS object with baseUrl for proxy endpoint")
+          :code $ quote
+            defn make-http-options (base-url)
+              js-object $ :baseUrl base-url
+          :examples $ []
+        |make-search-tools $ %{} :CodeEntry (:doc "|builds tools array with googleSearch and/or urlContext based on boolean flags; returns nil if neither")
+          :code $ quote
+            defn make-search-tools (search? has-url?)
+              let
+                  t $ ->
+                    js-array
+                      if search? $ js-object
+                        :googleSearch $ js-object
+                      if has-url? $ js-object
+                        :urlContext $ js-object
+                    .!filter $ fn (x & _a) x
+                if
+                  = 0 $ .-length t
+                  , nil t
+          :examples $ []
+        |make-thinking-config $ %{} :CodeEntry (:doc "|creates thinkingConfig JS object with thinkingBudget and includeThoughts fields")
+          :code $ quote
+            defn make-thinking-config (budget include-thoughts?)
+              js-object (:thinkingBudget budget) (:includeThoughts include-thoughts?)
+          :examples $ []
+        |messages->contents $ %{} :CodeEntry (:doc "|converts Calcit messages [{:role :user/:assistant :content str}] to Gemini contents format [{role parts:[{text}]}]")
+          :code $ quote
+            defn messages->contents (messages)
+              let
+                  messages0 $ if (some? messages) messages ([])
+                to-js-data $ map messages0
+                  fn (m)
+                    {}
+                      :role $ if
+                        = :assistant $ :role m
+                        , |model |user
+                      :parts $ []
+                        {} $ :text (:content m)
           :examples $ []
         |new-client $ %{} :CodeEntry (:doc |)
           :code $ quote
