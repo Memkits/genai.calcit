@@ -1,11 +1,68 @@
 
 {} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |genai)
   :configs $ {} (:init-fn |genai.main/main!) (:reload-fn |genai.main/reload!) (:version |0.0.2)
-    :modules $ [] |lilac/ |memof/
+    :modules $ [] |lilac/ |memof/ |respo.calcit/ |respo-ui.calcit/ |reel.calcit/
   :entries $ {}
+    :web $ {} (:init-fn |genai.main/web-main!) (:reload-fn |genai.main/web-reload!) (:version |0.0.0)
+      :modules $ [] |lilac/ |memof/ |respo.calcit/ |respo-ui.calcit/ |reel.calcit/
   :files $ {}
     |genai.main $ %{} :FileEntry
       :defs $ {}
+        |*store $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            def *store $ atom
+              {} (:result nil) (:loading? false) (:error-msg nil)
+          :examples $ []
+        |comp-container $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defcomp comp-container (result loading? error-msg on-transcribe)
+              div
+                {} $ :style
+                  {} (:padding |20px) (:font-family ui/font-normal)
+                div
+                  {} $ :style
+                    {} (:font-size |24px) (:font-weight |bold) (:margin-bottom |20px)
+                  <> "|Gemini Audio Transcription"
+                div
+                  {} $ :style ({})
+                  if loading?
+                    div ({}) (<> "|Transcribing... (Please Wait)")
+                    div ({}) (<> "|Select an audio file: ")
+                      input $ {} (:type |file) (:accept |audio/*)
+                        :on-change $ fn (e d!)
+                          let
+                              file $ -> e :event .-target .-files .-0
+                            if (some? file) (on-transcribe file)
+                if (some? error-msg)
+                  div
+                    {} $ :style
+                      {} (:color |red) (:margin-top |10px)
+                    <> error-msg
+                if (some? result)
+                  div
+                    {} $ :style
+                      {} (:margin-top |20px) (:padding |15px) (:border "|1px solid #eee") (:border-radius |4px) (:background-color |#f9f9f9) (:white-space |pre-wrap) (:min-height |100px)
+                    <> result
+          :examples $ []
+        |handle-transcribe! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn handle-transcribe! (client file) (hint-fn async)
+              do (swap! *store assoc :loading? true :error-msg nil)
+                try
+                  let
+                      base64 $ js-await (read-as-base64 file)
+                      mime-type $ .-type file
+                      cfg $ %{}? sdk/ContentConfig (:model |gemini-1.5-flash)
+                        :contents $ []
+                          {} (:role |user)
+                            :parts $ [] (sdk/text-part "|请将这段音频转录为简体中文文字。") (sdk/inline-audio base64 mime-type)
+                      response $ js-await (sdk/generate-content! client cfg)
+                      text $ sdk/extract-text response
+                    swap! *store assoc :result text :loading? false
+                  fn (err)
+                    do (js/console.error err)
+                      swap! *store assoc :loading? false :error-msg $ str err
+          :examples $ []
         |main! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn main! () (hint-fn async)
@@ -22,13 +79,57 @@
                 println |Status: $ :status result
                 println |Interaction-id: $ :interaction-id result
           :examples $ []
+        |read-as-base64 $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn read-as-base64 (file) (hint-fn async)
+              new js/Promise $ fn (resolve reject)
+                let
+                    reader $ new js/FileReader
+                  set! (.-onload reader)
+                    fn (e)
+                      let
+                          data-url $ .-result (.-target e)
+                        resolve $ .-1 (.!split data-url |,)
+                  set! (.-onerror reader)
+                    fn (e) (reject e)
+                  .!readAsDataURL reader file
+          :examples $ []
         |reload! $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn reload! () $ println |reloaded
           :examples $ []
+        |render-app! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn render-app! () $ render! (.!querySelector js/document |.app)
+              comp-container (:result @*store) (:loading? @*store) (:error-msg @*store)
+                fn (file)
+                  let
+                      api-key $ or
+                        .-GEMINI_API_KEY $ .-env js-process
+                        .-GEMINI_API_KEY js/window
+                    if
+                      not $ some? api-key
+                      swap! *store assoc :error-msg "|Missing GEMINI_API_KEY"
+                      let
+                          client $ sdk/new-client api-key
+                        handle-transcribe! client file
+              , nil
+          :examples $ []
+        |web-main! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn web-main! () $ do (println "|Web app started.") (render-app!)
+              add-watch *store :rerender $ fn (s r) (render-app!)
+          :examples $ []
+        |web-reload! $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn web-reload! () $ do (clear-cache!) (render-app!) (println |web-reloaded)
+          :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
-          ns genai.main $ :require (genai.sdk :as sdk) (|node:process :default js-process)
+          ns genai.main $ :require (genai.sdk :as sdk)
+            respo.core :refer $ render! clear-cache! defcomp <> div button input span
+            respo-ui.core :as ui
+            |node:process :default js-process
         :examples $ []
     |genai.sdk $ %{} :FileEntry
       :defs $ {}
@@ -144,7 +245,8 @@
                   mime-type $ :response-mime-type cfg
                   signal $ :abort-signal cfg
                   http-opts $ :http-options cfg
-                js-object (:model model) (:contents contents)
+                js-object (:model model)
+                  :contents $ if (some? contents) (to-js-data contents) js/undefined
                   :systemInstruction $ or sys js/undefined
                   :config $ js-object
                     :thinkingConfig $ or thinking js/undefined
@@ -195,6 +297,17 @@
                   fallback $ or text (-> chunk .?-promptFeedback .?-blockReason)
                 {} (:text fallback) (:thinking? is-thinking?)
           :examples $ []
+        |extract-text $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn extract-text (result)
+              let
+                  parts $ extract-content-parts result
+                if (some? parts)
+                  let
+                      first-part $ .-0 parts
+                    .-text first-part
+                  , nil
+          :examples $ []
         |generate-content! $ %{} :CodeEntry (:doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)")
           :code $ quote
             defn generate-content! (client cfg) (hint-fn async)
@@ -221,6 +334,12 @@
                       :includeRaiReason $ or include-rai js/undefined
                       :httpOptions $ or http-opts js/undefined
                       :signal $ or signal js/undefined
+          :examples $ []
+        |inline-audio $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn inline-audio (data mime-type)
+              {} $ :inline_data
+                {} (:data data) (:mime_type mime-type)
           :examples $ []
         |input->js $ %{} :CodeEntry (:doc |)
           :code $ quote
@@ -333,6 +452,11 @@
                       :topK $ or (:top-k gen-cfg) js/undefined
                     , js/undefined
                   :tools $ if (some? tools-v) (to-js-data tools-v) js/undefined
+          :examples $ []
+        |text-part $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn text-part (text)
+              {} $ :text text
           :examples $ []
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
