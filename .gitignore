@@ -11,3 +11,6 @@ dist/
 calcit.cirru
 
 .yarn/
+
+.calcit-snippets/
+

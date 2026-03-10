@@ -1,7 +1,16 @@
 Developer runs `cr js` to watch build JavaScript, and `yarn vite` to start a local server. LLMs edits program by running `cr` commands, and then triggers re-compiling.
 
-- make sure reading `llms/Calcit.md` for Calcit language tools, aka `cr` command.
-- read `llms/Respo.md` for UI library usages.
+查看 Calcit 命令行工具的用法:
+
+```bash
+cr docs agents
+```
+
+查看 Respo 模块的具体用法
+
+```bash
+cr libs readme respo.calcit -f docs/Respo-Agent.md
+```
 
 ## LLM 执行效率优化（不重复 llms/Calcit.md）
 
@@ -27,3 +36,13 @@ Developer runs `cr js` to watch build JavaScript, and `yarn vite` to start a loc
 - **结构化编辑优先**：严禁直接编辑 `compact.cirru`，必须使用 `cr tree replace` 或 `cr edit def` 等命令。建议先通过 `cr query search 'keyword' -f 'ns/def'` 精确获得 node 路径。
 - **性能优化准则**：对于动态生成的列表（如任务项），应将静态样式从内联 `:style` 提取到 `defstyle` 中，通过 `:class-name` 引用以提升虚拟 DOM 性能。
 - **排序逻辑翻转**：翻转列表排序应直接修改 `sort` 函数所用比较器的返回分支（如将 `if ret 1 -1` 翻转为 `if ret -1 1`）。
+
+## 入口约定（脚本 + Web 并存）
+
+- 默认入口保留脚本能力，不要再用 Web 逻辑覆盖 `genai.main/main!` 与 `genai.main/reload!`。
+- Web 功能使用独立入口：`genai.main/web-main!` 与 `genai.main/web-reload!`。
+- `compact.cirru` 里使用 `:entries :web` 配置 Web 入口，默认 `:configs` 继续指向脚本入口。
+- 构建命令约定：
+  - 脚本入口：`cr js`
+  - Web 入口：`cr --entry web js`
+- 开发时保持两条链路都可用：修 Web 不破坏脚本，修脚本不破坏 Web。
