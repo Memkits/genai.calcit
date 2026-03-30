@@ -37,6 +37,9 @@ let
   println $ :interaction-id result
 ```
 
+`sdk/interactions-create!` returns a raw `InteractionResult` record.
+`sdk/extract-outputs` converts it into a smaller `ExtractedInteractionOutput` record for common UI and CLI usage.
+
 #### Multi-turn conversation (continuing an interaction)
 
 ```cirru
@@ -87,15 +90,20 @@ let
   println $ .-totalTokens token-info
 ```
 
+`sdk/models-count-tokens!` returns a `CountTokensResponse` record with at least `.-totalTokens`.
+
 #### Local chat session
 
 ```cirru
 let
     chat $ sdk/chats-create client |gemini-2.5-flash nil nil
     response $ js-await $ sdk/chat-send-message! chat |"Why is the sky blue?" nil
+    history $ sdk/chat-get-history chat
   println $ .-text response
-  println $ sdk/chat-get-history chat
+  println history
 ```
+
+`sdk/chat-get-history` returns a list of `ChatHistoryTurn` values.
 
 #### Files and caches
 
@@ -120,6 +128,18 @@ let
 - `files-list!`, `files-upload!`, `files-get!`, `files-delete!`
 - `caches-list!`, `caches-create!`, `caches-get!`, `caches-delete!`
 
+### Result Shapes
+
+- Raw SDK-style results:
+  - `interactions-create!`, `interactions-get!` -> `InteractionResult`
+  - `models-count-tokens!` -> `CountTokensResponse`
+  - `chat-get-history` -> `(:: :list ChatHistoryTurn)`
+- Normalized helper results:
+  - `extract-outputs` -> `ExtractedInteractionOutput`
+  - `extract-stream-chunk` -> `StreamChunkOutput`
+  - `extract-text` -> `:string?`
+  - `extract-image-bytes` -> `:string?`
+
 ### Type Definitions
 
 **Enums**
@@ -139,12 +159,18 @@ let
 | `CreateCachedContentConfig` | `:ttl :expire-time :display-name :contents :system-instruction :tools :tool-config`      |
 | `GenerationConfig`      | `:temperature :max-output-tokens :top-p :top-k :candidate-count :stop-sequences`             |
 | `Interaction`           | `:id :string`, `:status InteractionStatus`, `:outputs :list?`, `:usage Usage?`                |
+| `InteractionResult`     | `:id :string`, `:status InteractionStatus`, `:outputs :list?`, `:role :string?`, `:usage SdkUsage?` |
 | `ListParams`            | `:page-size :page-token :filter :query-base :http-options :abort-signal`                      |
 | `RequestConfig`         | `:http-options :abort-signal`                                                                  |
 | `TextContent`           | `:text :string?`                                                                              |
 | `ImageContent`          | `:data :string?`, `:mime-type :string?`, `:uri :string?`                                      |
+| `ExtractedInteractionOutput` | `:text :string?`, `:function-calls (:list FunctionCallContent)`, `:interaction-id :string`, `:status InteractionStatus` |
 | `FunctionCallContent`   | `:id :string`, `:name :string`, `:arguments :map`                                             |
 | `FunctionResultContent` | `:call-id :string`, `:result :any`, `:is-error :bool?`                                        |
+| `CountTokensResponse`   | `:totalTokens :number`, `:sdkHttpResponse :any?`                                              |
+| `ChatHistoryTurn`       | `:role :string?`, `:parts :list`                                                              |
+| `StreamChunkOutput`     | `:text :string?`, `:thinking? :bool`                                                          |
+| `SdkUsage`              | raw SDK usage fields such as `:total_tokens`, `:total_input_tokens`, `:total_output_tokens`  |
 | `UploadFileConfig`      | `:name :mime-type :display-name :http-options :abort-signal`                                  |
 | `Usage`                 | `:input-tokens :number?`, `:output-tokens :number?`, `:total-tokens :number?`                 |
 | `Turn`                  | `:role :string?`, `:content :any`                                                             |
@@ -152,7 +178,8 @@ let
 ### Development
 
 ```bash
-cr js    # watch mode — recompiles on changes
+cr js       # compile once
+cr js -w    # watch mode
 ```
 
 ### License
