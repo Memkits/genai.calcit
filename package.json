@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@calcit/procs": "^0.12.14",
+    "@calcit/procs": "^0.13.19",
     "@google/genai": "^1.47.0"
   },
   "devDependencies": {
