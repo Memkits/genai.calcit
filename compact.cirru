@@ -1,19 +1,24 @@
 
-{} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |genai)
-  :configs $ {} (:init-fn |genai.main/main!) (:reload-fn |genai.main/reload!) (:version |0.0.3)
-    :modules $ [] |lilac/ |memof/ |respo.calcit/ |respo-ui.calcit/ |reel.calcit/
+{} (:about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `cr query` to inspect and `cr edit`/`cr tree` to modify. Run `cr docs agents --full` first. Manual edits must follow format and schema conventions, then run `cr edit format`.") (:package |genai)
   :entries $ {}
-    :web $ {} (:init-fn |genai.main/web-main!) (:reload-fn |genai.main/web-reload!) (:version |0.0.0)
-      :modules $ [] |lilac/ |memof/ |respo.calcit/ |respo-ui.calcit/ |reel.calcit/
+    :default $ {} (:description |) (:init-fn 'genai.main/main!) (:mode :native) (:reload-fn 'genai.main/reload!)
+      :feature-policy $ {}
+      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
+      :type-slots $ {}
+    :web $ {} (:description |) (:init-fn 'genai.main/web-main!) (:mode :native) (:reload-fn 'genai.main/web-reload!)
+      :feature-policy $ {}
+      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
+      :type-slots $ {}
   :files $ {}
-    |genai.main $ %{} :FileEntry
+    |genai.main $ %{} 'FileEntry
       :defs $ {}
-        |*store $ %{} :CodeEntry (:doc |) (:schema nil)
+        |*store $ %{} 'CodeEntry (:doc |)
           :code $ quote
             def *store $ atom
               {} (:result nil) (:loading? false) (:error-msg nil)
           :examples $ []
-        |comp-container $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Dynamic
+        |comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defcomp comp-container (result loading? error-msg on-transcribe)
               div
@@ -32,7 +37,7 @@
                         :on-change $ fn (e d!)
                           let
                               file $ -> e :event .-target .-files .-0
-                            if (some? file) (on-transcribe file)
+                            if (js-present? file) (on-transcribe file)
                 if (some? error-msg)
                   div
                     {} $ :style
@@ -44,10 +49,10 @@
                       {} (:margin-top |20px) (:padding |15px) (:border "|1px solid #eee") (:border-radius |4px) (:background-color |#f9f9f9) (:white-space |pre-wrap) (:min-height |100px)
                     <> result
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :bool :dynamic :dynamic
-        |handle-transcribe! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'Bool 'Dynamic 'Dynamic
+        |handle-transcribe! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn handle-transcribe! (client file)
               hint-fn $ {} (:async true)
@@ -67,30 +72,33 @@
                     do (js/console.error err)
                       swap! *store assoc :loading? false :error-msg $ str err
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :unit)
-              :args $ [] :dynamic :dynamic
-        |main! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Unit)
+              :args $ [] 'Dynamic 'Dynamic
+        |main! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn main! ()
               hint-fn $ {} (:async true)
               let
-                  api-key $ or
-                    .-GEMINI_API_KEY $ .-env js-process
+                  env $ unsafe-coerce (.-env js-process) 'JsObject
+                  api-key $ .-GEMINI_API_KEY env
+                  base-url $ .-GEMINI_BASE_URL env
+                  client $ if (js-present? api-key)
+                    if (js-present? base-url)
+                      sdk/new-client-with-base-url (unsafe-coerce api-key 'String) (unsafe-coerce base-url 'String)
+                      sdk/new-client $ unsafe-coerce api-key 'String
                     do (println "|Error: GEMINI_API_KEY not set") (js/process.exit 1)
-                  base-url $ .-GEMINI_BASE_URL (.-env js-process)
-                  client $ if (some? base-url) (sdk/new-client-with-base-url api-key base-url) (sdk/new-client api-key)
                   params $ %{}? sdk/CreateParams (:model |gemini-2.5-flash) (:input "|Explain how AI works in a few words.")
                   interaction $ js-await (sdk/interactions-create! client params)
                   result $ sdk/extract-outputs interaction
-                println |Response: $ :text result
-                println |Status: $ :status result
-                println |Interaction-id: $ :interaction-id result
+                println |Response: $ &map:get result :text
+                println |Status: $ &map:get result :status
+                println |Interaction-id: $ &map:get result :interaction-id
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :unit)
+          :schema $ :: 'Fn
+            {} (:return 'Unit)
               :args $ []
-        |read-as-base64 $ %{} :CodeEntry (:doc |)
+        |read-as-base64 $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn read-as-base64 (file)
               hint-fn $ {} (:async true)
@@ -106,264 +114,291 @@
                     fn (e) (reject e)
                   .!readAsDataURL reader file
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :string)
-              :args $ [] :dynamic
-        |reload! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'String)
+              :args $ [] 'Dynamic
+        |reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn reload! () $ println |reloaded
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :unit)
+          :schema $ :: 'Fn
+            {} (:return 'Unit)
               :args $ []
-        |render-app! $ %{} :CodeEntry (:doc |)
+        |render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn render-app! () $ render! (.!querySelector js/document |.app)
               comp-container (:result @*store) (:loading? @*store) (:error-msg @*store)
                 fn (file)
                   let
-                      api-key $ or
-                        .-GEMINI_API_KEY $ .-env js-process
+                      env $ unsafe-coerce (.-env js-process) 'JsObject
+                      api-key $ if
+                        js-present? $ .-GEMINI_API_KEY env
+                        .-GEMINI_API_KEY env
                         .-GEMINI_API_KEY js/window
                     if
-                      not $ some? api-key
+                      not $ js-present? api-key
                       swap! *store assoc :error-msg "|Missing GEMINI_API_KEY"
                       let
-                          client $ sdk/new-client api-key
+                          client $ sdk/new-client (unsafe-coerce api-key 'String)
                         handle-transcribe! client file
               , nil
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :unit)
+          :schema $ :: 'Fn
+            {} (:return 'Unit)
               :args $ []
-        |web-main! $ %{} :CodeEntry (:doc |)
+        |web-main! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn web-main! () $ do (println "|Web app started.") (render-app!)
               add-watch *store :rerender $ fn (s r) (render-app!)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :tag)
+          :schema $ :: 'Fn
+            {} (:return 'Tag)
               :args $ []
-        |web-reload! $ %{} :CodeEntry (:doc |)
+        |web-reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn web-reload! () $ do (clear-cache!) (render-app!) (println |web-reloaded)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :unit)
+          :schema $ :: 'Fn
+            {} (:return 'Unit)
               :args $ []
-      :ns $ %{} :NsEntry (:doc |)
+      :ns $ %{} 'NsEntry (:doc |)
         :code $ quote
           ns genai.main $ :require (genai.sdk :as sdk)
             respo.core :refer $ render! clear-cache! defcomp <> div button input span
             respo-ui.core :as ui
             |node:process :default js-process
-    |genai.sdk $ %{} :FileEntry
+    |genai.sdk $ %{} 'FileEntry
       :defs $ {}
-        |ChatHistoryTurn $ %{} :CodeEntry (:doc |) (:schema nil)
+        |ChatHistoryTurn $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct ChatHistoryTurn
-              :role $ :: :optional :string
-              :parts :list
+              :role $ :: 'Optional 'String
+              :parts 'List
           :examples $ []
-        |ClientOptions $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |ClientOptions $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct ClientOptions
-              :api-key $ :: :optional :string
-              :vertexai $ :: :optional :bool
-              :project $ :: :optional :string
-              :location $ :: :optional :string
-              :api-version $ :: :optional :string
-              :http-options $ :: :optional :dynamic
+              :api-key $ :: 'Optional 'String
+              :vertexai $ :: 'Optional 'Bool
+              :project $ :: 'Optional 'String
+              :location $ :: 'Optional 'String
+              :api-version $ :: 'Optional 'String
+              :http-options $ :: 'Optional 'Dynamic
           :examples $ []
-        |ContentConfig $ %{} :CodeEntry (:doc "|config struct for generateContent/generateContentStream, fields: model contents system-instruction thinking-config tools response-modalities response-mime-type abort-signal http-options") (:schema nil)
+          :schema $ :: 'Enum
+        |ContentConfig $ %{} 'CodeEntry (:doc "|config struct for generateContent/generateContentStream, fields: model contents system-instruction thinking-config tools response-modalities response-mime-type abort-signal http-options")
           :code $ quote
-            defstruct ContentConfig (:model :string) (:contents :dynamic)
-              :system-instruction $ :: :optional :dynamic
-              :thinking-config $ :: :optional :dynamic
-              :tools $ :: :optional :list
-              :tool-config $ :: :optional :dynamic
-              :response-modalities $ :: :optional :list
-              :response-mime-type $ :: :optional :string
-              :cached-content $ :: :optional :string
-              :abort-signal $ :: :optional :dynamic
-              :http-options $ :: :optional :dynamic
+            defstruct ContentConfig (:model 'String) (:contents 'Dynamic)
+              :system-instruction $ :: 'Optional 'Dynamic
+              :thinking-config $ :: 'Optional 'Dynamic
+              :tools $ :: 'Optional 'List
+              :tool-config $ :: 'Optional 'Dynamic
+              :response-modalities $ :: 'Optional 'List
+              :response-mime-type $ :: 'Optional 'String
+              :cached-content $ :: 'Optional 'String
+              :abort-signal $ :: 'Optional 'Dynamic
+              :http-options $ :: 'Optional 'Dynamic
           :examples $ []
-        |ContentOutput $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |ContentOutput $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defenum ContentOutput (:text TextContent) (:image ImageContent) (:thought ThoughtContent) (:function-call FunctionCallContent) (:function-result FunctionResultContent)
           :examples $ []
-        |CountTokensResponse $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |CountTokensResponse $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defstruct CountTokensResponse (:totalTokens :number)
-              :sdkHttpResponse $ :: :optional :dynamic
+            defstruct CountTokensResponse (:totalTokens 'Number)
+              :sdkHttpResponse $ :: 'Optional 'Dynamic
           :examples $ []
-        |CreateCachedContentConfig $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |CreateCachedContentConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct CreateCachedContentConfig
-              :ttl $ :: :optional :string
-              :expire-time $ :: :optional :string
-              :display-name $ :: :optional :string
-              :contents $ :: :optional :dynamic
-              :system-instruction $ :: :optional :dynamic
-              :tools $ :: :optional :list
-              :tool-config $ :: :optional :dynamic
-              :kms-key-name $ :: :optional :string
-              :http-options $ :: :optional :dynamic
-              :abort-signal $ :: :optional :dynamic
+              :ttl $ :: 'Optional 'String
+              :expire-time $ :: 'Optional 'String
+              :display-name $ :: 'Optional 'String
+              :contents $ :: 'Optional 'Dynamic
+              :system-instruction $ :: 'Optional 'Dynamic
+              :tools $ :: 'Optional 'List
+              :tool-config $ :: 'Optional 'Dynamic
+              :kms-key-name $ :: 'Optional 'String
+              :http-options $ :: 'Optional 'Dynamic
+              :abort-signal $ :: 'Optional 'Dynamic
           :examples $ []
-        |CreateParams $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |CreateParams $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defstruct CreateParams (:model :string) (:input :dynamic)
-              :system-instruction $ :: :optional :dynamic
-              :previous-interaction-id $ :: :optional :string
-              :agent $ :: :optional :string
-              :background $ :: :optional :bool
-              :store $ :: :optional :bool
-              :generation-config $ :: :optional GenerationConfig
-              :tools $ :: :optional :list
-              :response-modalities $ :: :optional :list
-              :response-format $ :: :optional :dynamic
-              :response-mime-type $ :: :optional :string
-              :abort-signal $ :: :optional :dynamic
-              :http-options $ :: :optional :dynamic
+            defstruct CreateParams (:model 'String) (:input 'Dynamic)
+              :system-instruction $ :: 'Optional 'Dynamic
+              :previous-interaction-id $ :: 'Optional 'String
+              :agent $ :: 'Optional 'String
+              :background $ :: 'Optional 'Bool
+              :store $ :: 'Optional 'Bool
+              :generation-config $ :: 'Optional GenerationConfig
+              :tools $ :: 'Optional 'List
+              :response-modalities $ :: 'Optional 'List
+              :response-format $ :: 'Optional 'Dynamic
+              :response-mime-type $ :: 'Optional 'String
+              :abort-signal $ :: 'Optional 'Dynamic
+              :http-options $ :: 'Optional 'Dynamic
           :examples $ []
-        |ExtractedInteractionOutput $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |ExtractedInteractionOutput $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct ExtractedInteractionOutput
-              :text $ :: :optional :string
-              :function-calls $ :: :list FunctionCallContent
-              :interaction-id :string
+              :text $ :: 'Optional 'String
+              :function-calls $ :: 'List FunctionCallContent
+              :interaction-id 'String
               :status InteractionStatus
           :examples $ []
-        |FunctionCallContent $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |FunctionCallContent $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defstruct FunctionCallContent (:id :string) (:name :string) (:arguments :map)
+            defstruct FunctionCallContent (:id 'String) (:name 'String) (:arguments 'Map)
           :examples $ []
-        |FunctionResultContent $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |FunctionResultContent $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defstruct FunctionResultContent (:call-id :string) (:result :dynamic)
-              :is-error $ :: :optional :bool
-              :name $ :: :optional :string
+            defstruct FunctionResultContent (:call-id 'String) (:result 'Dynamic)
+              :is-error $ :: 'Optional 'Bool
+              :name $ :: 'Optional 'String
           :examples $ []
-        |GenerationConfig $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |GenerationConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct GenerationConfig
-              :temperature $ :: :optional :number
-              :max-output-tokens $ :: :optional :number
-              :top-p $ :: :optional :number
-              :top-k $ :: :optional :number
-              :candidate-count $ :: :optional :number
-              :stop-sequences $ :: :optional :list
-              :response-mime-type $ :: :optional :string
+              :temperature $ :: 'Optional 'Number
+              :max-output-tokens $ :: 'Optional 'Number
+              :top-p $ :: 'Optional 'Number
+              :top-k $ :: 'Optional 'Number
+              :candidate-count $ :: 'Optional 'Number
+              :stop-sequences $ :: 'Optional 'List
+              :response-mime-type $ :: 'Optional 'String
           :examples $ []
-        |ImageContent $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |ImageContent $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct ImageContent
-              :data $ :: :optional :string
-              :mime-type $ :: :optional :string
-              :uri $ :: :optional :string
+              :data $ :: 'Optional 'String
+              :mime-type $ :: 'Optional 'String
+              :uri $ :: 'Optional 'String
           :examples $ []
-        |ImageGenConfig $ %{} :CodeEntry (:doc "|config struct for generateImages, fields: model prompt number-of-images include-rai-reason abort-signal http-options") (:schema nil)
+          :schema $ :: 'Enum
+        |ImageGenConfig $ %{} 'CodeEntry (:doc "|config struct for generateImages, fields: model prompt number-of-images include-rai-reason abort-signal http-options")
           :code $ quote
-            defstruct ImageGenConfig (:model :string) (:prompt :string)
-              :number-of-images $ :: :optional :number
-              :include-rai-reason $ :: :optional :bool
-              :abort-signal $ :: :optional :dynamic
-              :http-options $ :: :optional :dynamic
+            defstruct ImageGenConfig (:model 'String) (:prompt 'String)
+              :number-of-images $ :: 'Optional 'Number
+              :include-rai-reason $ :: 'Optional 'Bool
+              :abort-signal $ :: 'Optional 'Dynamic
+              :http-options $ :: 'Optional 'Dynamic
           :examples $ []
-        |Interaction $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |Interaction $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defstruct Interaction (:id :string) (:status InteractionStatus)
-              :outputs $ :: :optional :list
-              :model $ :: :optional :string
-              :created $ :: :optional :string
-              :updated $ :: :optional :string
-              :usage $ :: :optional Usage
+            defstruct Interaction (:id 'String) (:status InteractionStatus)
+              :outputs $ :: 'Optional 'List
+              :model $ :: 'Optional 'String
+              :created $ :: 'Optional 'String
+              :updated $ :: 'Optional 'String
+              :usage $ :: 'Optional Usage
           :examples $ []
-        |InteractionResult $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |InteractionResult $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defstruct InteractionResult (:id :string) (:status InteractionStatus)
-              :outputs $ :: :optional :list
-              :model $ :: :optional :string
-              :created $ :: :optional :string
-              :updated $ :: :optional :string
-              :role $ :: :optional :string
-              :object $ :: :optional :string
-              :usage $ :: :optional 'SdkUsage
+            defstruct InteractionResult (:id 'String) (:status InteractionStatus)
+              :outputs $ :: 'Optional 'List
+              :model $ :: 'Optional 'String
+              :created $ :: 'Optional 'String
+              :updated $ :: 'Optional 'String
+              :role $ :: 'Optional 'String
+              :object $ :: 'Optional 'String
+              :usage $ :: 'Optional 'SdkUsage
           :examples $ []
-        |InteractionStatus $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |InteractionStatus $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defenum InteractionStatus (:completed :dynamic) (:failed :dynamic) (:in-progress :dynamic) (:cancelled :dynamic) (:incomplete :dynamic) (:requires-action :dynamic)
+            defenum InteractionStatus (:completed 'Dynamic) (:failed 'Dynamic) (:in-progress 'Dynamic) (:cancelled 'Dynamic) (:incomplete 'Dynamic) (:requires-action 'Dynamic)
           :examples $ []
-        |ListParams $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |ListParams $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct ListParams
-              :page-size $ :: :optional :number
-              :page-token $ :: :optional :string
-              :filter $ :: :optional :string
-              :query-base $ :: :optional :bool
-              :http-options $ :: :optional :dynamic
-              :abort-signal $ :: :optional :dynamic
+              :page-size $ :: 'Optional 'Number
+              :page-token $ :: 'Optional 'String
+              :filter $ :: 'Optional 'String
+              :query-base $ :: 'Optional 'Bool
+              :http-options $ :: 'Optional 'Dynamic
+              :abort-signal $ :: 'Optional 'Dynamic
           :examples $ []
-        |RequestConfig $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |RequestConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct RequestConfig
-              :http-options $ :: :optional :dynamic
-              :abort-signal $ :: :optional :dynamic
+              :http-options $ :: 'Optional 'Dynamic
+              :abort-signal $ :: 'Optional 'Dynamic
           :examples $ []
-        |SdkUsage $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |SdkUsage $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct SdkUsage
-              :total_tokens $ :: :optional :number
-              :total_input_tokens $ :: :optional :number
-              :input_tokens_by_modality $ :: :optional :list
-              :total_cached_tokens $ :: :optional :number
-              :total_output_tokens $ :: :optional :number
-              :total_tool_use_tokens $ :: :optional :number
-              :total_thought_tokens $ :: :optional :number
+              :total_tokens $ :: 'Optional 'Number
+              :total_input_tokens $ :: 'Optional 'Number
+              :input_tokens_by_modality $ :: 'Optional 'List
+              :total_cached_tokens $ :: 'Optional 'Number
+              :total_output_tokens $ :: 'Optional 'Number
+              :total_tool_use_tokens $ :: 'Optional 'Number
+              :total_thought_tokens $ :: 'Optional 'Number
           :examples $ []
-        |StreamChunkOutput $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |StreamChunkOutput $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct StreamChunkOutput
-              :text $ :: :optional :string
-              :thinking? :bool
+              :text $ :: 'Optional 'String
+              :thinking? 'Bool
           :examples $ []
-        |TextContent $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |TextContent $ %{} 'CodeEntry (:doc |)
           :code $ quote
-            defstruct TextContent $ :text (:: :optional :string)
+            defstruct TextContent $ :text (:: 'Optional 'String)
           :examples $ []
-        |ThoughtContent $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |ThoughtContent $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct ThoughtContent
-              :signature $ :: :optional :string
-              :summary $ :: :optional :list
+              :signature $ :: 'Optional 'String
+              :summary $ :: 'Optional 'List
           :examples $ []
-        |Turn $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |Turn $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct Turn
-              :role $ :: :optional :string
-              :content :dynamic
+              :role $ :: 'Optional 'String
+              :content 'Dynamic
           :examples $ []
-        |UploadFileConfig $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |UploadFileConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct UploadFileConfig
-              :name $ :: :optional :string
-              :mime-type $ :: :optional :string
-              :display-name $ :: :optional :string
-              :http-options $ :: :optional :dynamic
-              :abort-signal $ :: :optional :dynamic
+              :name $ :: 'Optional 'String
+              :mime-type $ :: 'Optional 'String
+              :display-name $ :: 'Optional 'String
+              :http-options $ :: 'Optional 'Dynamic
+              :abort-signal $ :: 'Optional 'Dynamic
           :examples $ []
-        |Usage $ %{} :CodeEntry (:doc |) (:schema nil)
+          :schema $ :: 'Enum
+        |Usage $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defstruct Usage
-              :input-tokens $ :: :optional :number
-              :output-tokens $ :: :optional :number
-              :total-tokens $ :: :optional :number
+              :input-tokens $ :: 'Optional 'Number
+              :output-tokens $ :: 'Optional 'Number
+              :total-tokens $ :: 'Optional 'Number
           :examples $ []
-        |cached-content-config->js $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Enum
+        |cached-content-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn cached-content-config->js (cfg)
-              if (some? cfg)
+              if (js-present? cfg)
                 let
                     contents $ :contents cfg
                     sys $ :system-instruction cfg
@@ -373,30 +408,31 @@
                     :ttl $ or (:ttl cfg) js/undefined
                     :expireTime $ or (:expire-time cfg) js/undefined
                     :displayName $ or (:display-name cfg) js/undefined
-                    :contents $ if (some? contents) (maybe-to-js-data contents) js/undefined
-                    :systemInstruction $ if (some? sys) (maybe-to-js-data sys) js/undefined
-                    :tools $ if (some? tools-v) (to-js-data tools-v) js/undefined
-                    :toolConfig $ if (some? tool-config) (maybe-to-js-data tool-config) js/undefined
+                    :contents $ if (js-present? contents) (maybe-to-js-data contents) js/undefined
+                    :systemInstruction $ if (js-present? sys) (maybe-to-js-data sys) js/undefined
+                    :tools $ if (js-present? tools-v) (to-js-data tools-v) js/undefined
+                    :toolConfig $ if (js-present? tool-config) (maybe-to-js-data tool-config) js/undefined
                     :kmsKeyName $ or (:kms-key-name cfg) js/undefined
                     :httpOptions $ or (:http-options cfg) js/undefined
                     :abortSignal $ or (:abort-signal cfg) js/undefined
                 , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'CreateCachedContentConfig
-        |caches-create! $ %{} :CodeEntry (:doc |)
+        |caches-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn caches-create! (client model cfg)
               hint-fn $ {} (:async true)
-              .!create (.-caches client)
+              .!create
+                unsafe-coerce (.-caches client) 'JsObject
                 js-object (:model model)
                   :config $ cached-content-config->js cfg
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string 'CreateCachedContentConfig
-        |caches-delete! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String 'CreateCachedContentConfig
+        |caches-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn caches-delete! (client name cfg)
               hint-fn $ {} (:async true)
@@ -404,10 +440,10 @@
                 js-object (:name name)
                   :config $ request-config->js cfg
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string 'RequestConfig
-        |caches-get! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String 'RequestConfig
+        |caches-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn caches-get! (client name cfg)
               hint-fn $ {} (:async true)
@@ -415,64 +451,65 @@
                 js-object (:name name)
                   :config $ request-config->js cfg
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string 'RequestConfig
-        |caches-list! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String 'RequestConfig
+        |caches-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn caches-list! (client cfg)
               hint-fn $ {} (:async true)
               .!list (.-caches client)
-                if (some? cfg)
+                if (js-present? cfg)
                   js-object $ :config (list-config->js cfg)
                   , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic 'ListParams
-        |chat-get-history $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'ListParams
+        |chat-get-history $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn chat-get-history (chat)
               to-calcit-data $ .!getHistory chat
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {}
-              :args $ [] :dynamic
-              :return $ :: :list 'ChatHistoryTurn
-        |chat-send-message! $ %{} :CodeEntry (:doc |)
+              :args $ [] 'Dynamic
+              :return $ :: 'List 'ChatHistoryTurn
+        |chat-send-message! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn chat-send-message! (chat message config)
               hint-fn $ {} (:async true)
               .!sendMessage chat $ js-object
                 :message $ maybe-to-js-data message
-                :config $ if (some? config) (maybe-to-js-data config) js/undefined
+                :config $ if (js-present? config) (maybe-to-js-data config) js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :dynamic (:: :optional 'GenerationConfig)
-        |chat-send-message-stream! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'Dynamic (:: 'Optional 'GenerationConfig)
+        |chat-send-message-stream! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn chat-send-message-stream! (chat message config)
               hint-fn $ {} (:async true)
               .!sendMessageStream chat $ js-object
                 :message $ maybe-to-js-data message
-                :config $ if (some? config) (maybe-to-js-data config) js/undefined
+                :config $ if (js-present? config) (maybe-to-js-data config) js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :dynamic (:: :optional 'GenerationConfig)
-        |chats-create $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'Dynamic (:: 'Optional 'GenerationConfig)
+        |chats-create $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn chats-create (client model config history)
-              .!create (.-chats client)
+              .!create
+                unsafe-coerce (.-chats client) 'JsObject
                 js-object (:model model)
-                  :config $ if (some? config) (maybe-to-js-data config) js/undefined
-                  :history $ if (some? history) (maybe-to-js-data history) js/undefined
+                  :config $ if (js-present? config) (maybe-to-js-data config) js/undefined
+                  :history $ if (js-present? history) (maybe-to-js-data history) js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string (:: :optional 'GenerationConfig) (:: :optional :list)
-        |content-config->js $ %{} :CodeEntry (:doc "|converts ContentConfig struct to JS object for SDK calls, maps fields to camelCase JS properties")
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String (:: 'Optional 'GenerationConfig) (:: 'Optional 'List)
+        |content-config->js $ %{} 'CodeEntry (:doc "|converts ContentConfig struct to JS object for SDK calls, maps fields to camelCase JS properties")
           :code $ quote
             defn content-config->js (cfg)
               let
@@ -488,48 +525,54 @@
                   signal $ :abort-signal cfg
                   http-opts $ :http-options cfg
                 js-object (:model model)
-                  :contents $ if (some? contents) (maybe-to-js-data contents) js/undefined
-                  :systemInstruction $ if (some? sys) (maybe-to-js-data sys) js/undefined
+                  :contents $ if (js-present? contents) (maybe-to-js-data contents) js/undefined
+                  :systemInstruction $ if (js-present? sys) (maybe-to-js-data sys) js/undefined
                   :config $ js-object
                     :thinkingConfig $ or thinking js/undefined
-                    :tools $ if (some? tools-v) (to-js-data tools-v) js/undefined
-                    :toolConfig $ if (some? tool-config) (maybe-to-js-data tool-config) js/undefined
+                    :tools $ if (js-present? tools-v) (to-js-data tools-v) js/undefined
+                    :toolConfig $ if (js-present? tool-config) (maybe-to-js-data tool-config) js/undefined
                     :responseModalities $ or modalities js/undefined
                     :responseMimeType $ or mime-type js/undefined
                     :cachedContent $ or cached-content js/undefined
                     :abortSignal $ or signal js/undefined
                     :httpOptions $ or http-opts js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'ContentConfig
-        |extract-content-parts $ %{} :CodeEntry (:doc "|extracts candidates[0].content.parts from a non-streaming generateContent response")
+        |extract-content-parts $ %{} 'CodeEntry (:doc "|extracts candidates[0].content.parts from a non-streaming generateContent response")
           :code $ quote
             defn extract-content-parts (result) (-> result .-candidates .-0 .-content .-parts)
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {}
-              :args $ [] :dynamic
-              :return $ :: :optional :list
-        |extract-image-bytes $ %{} :CodeEntry (:doc "|extracts base64 imageBytes from generatedImages[0].image of a generateImages response")
+              :args $ [] 'Dynamic
+              :return $ :: 'Optional 'List
+        |extract-image-bytes $ %{} 'CodeEntry (:doc "|extracts base64 imageBytes from generatedImages[0].image of a generateImages response")
           :code $ quote
             defn extract-image-bytes (response) (-> response .-generatedImages .-0 .-image .-imageBytes)
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {}
-              :args $ [] :dynamic
-              :return $ :: :optional :string
-        |extract-outputs $ %{} :CodeEntry (:doc |)
+              :args $ [] 'Dynamic
+              :return $ :: 'Optional 'String
+        |extract-outputs $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn extract-outputs (interaction)
               let
-                  outputs $ either (.-outputs interaction) (js-array)
+                  raw-outputs $ .-outputs interaction
+                  outputs $ unsafe-coerce
+                    if (js-present? raw-outputs) raw-outputs $ js-array
+                    , 'JsArray
                   text-out $ -> outputs
                     .!find $ fn (o & args)
                       = (.-type o) |text
-                  fn-calls $ -> outputs
-                    .!filter $ fn (o & args)
-                      = (.-type o) |function_call
+                  function-outputs $ unsafe-coerce
+                    -> outputs $ .!filter
+                      fn (o & args)
+                        = (.-type o) |function_call
+                    , 'JsArray
+                  fn-calls $ -> function-outputs
                     .!map $ fn (o & args)
                       %{}? FunctionCallContent
                         :name $ .-name o
@@ -537,43 +580,45 @@
                         :id $ .-id o
                     , to-calcit-data
                 %{}? ExtractedInteractionOutput
-                  :text $ if (some? text-out) (.-text text-out) nil
+                  :text $ if (js-present? text-out)
+                    unsafe-coerce (.-text text-out) 'String
+                    , nil
                   :function-calls fn-calls
                   :interaction-id $ .-id interaction
                   :status $ .-status interaction
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {} (:return 'ExtractedInteractionOutput)
-              :args $ [] :dynamic
-        |extract-stream-chunk $ %{} :CodeEntry (:doc "|extracts text and thinking? from a stream chunk, returns {:text :thinking?} map; handles optional chaining")
+              :args $ [] 'Dynamic
+        |extract-stream-chunk $ %{} 'CodeEntry (:doc "|extracts text and thinking? from a stream chunk, returns {:text :thinking?} map; handles optional chaining")
           :code $ quote
             defn extract-stream-chunk (chunk)
               let
                   part js/chunk.candidates?.[0]?.content?.parts?.[0]
-                  is-thinking? $ if (some? part) (.-thought part) false
-                  text $ if (some? part) (.-text part) (.-text chunk)
+                  is-thinking? $ if (js-present? part) (.-thought part) false
+                  text $ if (js-present? part) (.-text part) (.-text chunk)
                   fallback $ or text (-> chunk .?-promptFeedback .?-blockReason)
                 %{}? StreamChunkOutput (:text fallback) (:thinking? is-thinking?)
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {} (:return 'StreamChunkOutput)
-              :args $ [] :dynamic
-        |extract-text $ %{} :CodeEntry (:doc |)
+              :args $ [] 'Dynamic
+        |extract-text $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn extract-text (result)
               let
                   parts $ extract-content-parts result
-                if (some? parts)
+                if (js-present? parts)
                   let
                       first-part $ .-0 parts
                     .-text first-part
                   , nil
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {}
-              :args $ [] :dynamic
-              :return $ :: :optional :string
-        |files-delete! $ %{} :CodeEntry (:doc |)
+              :args $ [] 'Dynamic
+              :return $ :: 'Optional 'String
+        |files-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn files-delete! (client name cfg)
               hint-fn $ {} (:async true)
@@ -581,10 +626,10 @@
                 js-object (:name name)
                   :config $ request-config->js cfg
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string 'RequestConfig
-        |files-get! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String 'RequestConfig
+        |files-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn files-get! (client name cfg)
               hint-fn $ {} (:async true)
@@ -592,22 +637,22 @@
                 js-object (:name name)
                   :config $ request-config->js cfg
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string 'RequestConfig
-        |files-list! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String 'RequestConfig
+        |files-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn files-list! (client cfg)
               hint-fn $ {} (:async true)
               .!list (.-files client)
-                if (some? cfg)
+                if (js-present? cfg)
                   js-object $ :config (list-config->js cfg)
                   , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic 'ListParams
-        |files-upload! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'ListParams
+        |files-upload! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn files-upload! (client file cfg)
               hint-fn $ {} (:async true)
@@ -615,28 +660,28 @@
                 js-object (:file file)
                   :config $ upload-file-config->js cfg
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :dynamic 'UploadFileConfig
-        |generate-content! $ %{} :CodeEntry (:doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)")
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'Dynamic 'UploadFileConfig
+        |generate-content! $ %{} 'CodeEntry (:doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)")
           :code $ quote
             defn generate-content! (client cfg)
               hint-fn $ {} (:async true)
               .!generateContent (.-models client) (content-config->js cfg)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic 'ContentConfig
-        |generate-content-stream! $ %{} :CodeEntry (:doc "|async, calls models.generateContentStream with ContentConfig, returns stream for js-for-await")
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'ContentConfig
+        |generate-content-stream! $ %{} 'CodeEntry (:doc "|async, calls models.generateContentStream with ContentConfig, returns stream for js-for-await")
           :code $ quote
             defn generate-content-stream! (client cfg)
               hint-fn $ {} (:async true)
               .!generateContentStream (.-models client) (content-config->js cfg)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic 'ContentConfig
-        |generate-images! $ %{} :CodeEntry (:doc "|async, calls models.generateImages with ImageGenConfig, returns image generation response")
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'ContentConfig
+        |generate-images! $ %{} 'CodeEntry (:doc "|async, calls models.generateImages with ImageGenConfig, returns image generation response")
           :code $ quote
             defn generate-images! (client cfg)
               hint-fn $ {} (:async true)
@@ -654,13 +699,13 @@
                       :httpOptions $ or http-opts js/undefined
                       :signal $ or signal js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic 'ImageGenConfig
-        |generation-config->js $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'ImageGenConfig
+        |generation-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn generation-config->js (cfg)
-              if (some? cfg)
+              if (js-present? cfg)
                 js-object
                   :temperature $ or (:temperature cfg) js/undefined
                   :maxOutputTokens $ or (:max-output-tokens cfg) js/undefined
@@ -671,19 +716,19 @@
                   :responseMimeType $ or (:response-mime-type cfg) js/undefined
                 , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'GenerationConfig
-        |inline-audio $ %{} :CodeEntry (:doc |)
+        |inline-audio $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn inline-audio (data mime-type)
               {} $ :inline_data
                 {} (:data data) (:mime_type mime-type)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :string :string
-        |input->js $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'String 'String
+        |input->js $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn input->js (v)
               if (string? v)
@@ -693,54 +738,58 @@
                     if (contains? v :type) (to-js-data v)
                       if (contains? v :content)
                         js-array $ js-object (:type |text)
-                          :text $ :content v
+                          :text $ &map:get v :content
                         to-js-data v
-                    v
+                    identity v
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'T
               :generics $ [] 'T
-        |interactions-cancel! $ %{} :CodeEntry (:doc |)
+        |interactions-cancel! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn interactions-cancel! (client id)
               hint-fn $ {} (:async true)
               .!cancel (.-interactions client) id
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string
-        |interactions-create! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String
+        |interactions-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn interactions-create! (client params)
               hint-fn $ {} (:async true)
-              .!create (.-interactions client) (params->js params)
+              unsafe-coerce
+                .!create
+                  unsafe-coerce (.-interactions client) 'JsObject
+                  params->js params
+                , 'InteractionResult
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {} (:return 'InteractionResult)
-              :args $ [] :dynamic 'CreateParams
-        |interactions-delete! $ %{} :CodeEntry (:doc |)
+              :args $ [] 'Dynamic 'CreateParams
+        |interactions-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn interactions-delete! (client id)
               hint-fn $ {} (:async true)
               .!delete (.-interactions client) id
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string
-        |interactions-get! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String
+        |interactions-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn interactions-get! (client id)
               hint-fn $ {} (:async true)
               .!get (.-interactions client) id
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {} (:return 'InteractionResult)
-              :args $ [] :dynamic :string
-        |list-config->js $ %{} :CodeEntry (:doc |)
+              :args $ [] 'Dynamic 'String
+        |list-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn list-config->js (cfg)
-              if (some? cfg)
+              if (js-present? cfg)
                 js-object
                   :httpOptions $ or (:http-options cfg) js/undefined
                   :abortSignal $ or (:abort-signal cfg) js/undefined
@@ -750,10 +799,10 @@
                   :queryBase $ or (:query-base cfg) js/undefined
                 , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'ListParams
-        |make-abort-signal $ %{} :CodeEntry (:doc "|creates AbortController, stores in *abort-control atom, returns signal; pass atom for external abort control")
+        |make-abort-signal $ %{} 'CodeEntry (:doc "|creates AbortController, stores in *abort-control atom, returns signal; pass atom for external abort control")
           :code $ quote
             defn make-abort-signal (*abort-control)
               let
@@ -761,18 +810,18 @@
                 reset! *abort-control abort
                 .-signal abort
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :ref
-        |make-http-options $ %{} :CodeEntry (:doc "|creates httpOptions JS object with baseUrl for proxy endpoint")
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Ref
+        |make-http-options $ %{} 'CodeEntry (:doc "|creates httpOptions JS object with baseUrl for proxy endpoint")
           :code $ quote
             defn make-http-options (base-url)
               js-object $ :baseUrl base-url
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :string
-        |make-search-tools $ %{} :CodeEntry (:doc "|builds tools array with googleSearch and/or urlContext based on boolean flags; returns nil if neither")
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'String
+        |make-search-tools $ %{} 'CodeEntry (:doc "|builds tools array with googleSearch and/or urlContext based on boolean flags; returns nil if neither")
           :code $ quote
             defn make-search-tools (search? has-url?)
               let
@@ -787,18 +836,18 @@
                   = 0 $ .-length t
                   , nil t
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :bool :bool
-        |make-thinking-config $ %{} :CodeEntry (:doc "|creates thinkingConfig JS object with thinkingBudget and includeThoughts fields")
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Bool 'Bool
+        |make-thinking-config $ %{} 'CodeEntry (:doc "|creates thinkingConfig JS object with thinkingBudget and includeThoughts fields")
           :code $ quote
             defn make-thinking-config (budget include-thoughts?)
               js-object (:thinkingBudget budget) (:includeThoughts include-thoughts?)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :number :bool
-        |maybe-to-js-data $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Number 'Bool
+        |maybe-to-js-data $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn maybe-to-js-data (x)
               if
@@ -806,15 +855,15 @@
                 to-js-data x
                 , x
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'T
               :generics $ [] 'T
-        |messages->contents $ %{} :CodeEntry (:doc "|converts Calcit messages [{:role :user/:assistant :content str}] to Gemini contents format [{role parts:[{text}]}]")
+        |messages->contents $ %{} 'CodeEntry (:doc "|converts Calcit messages [{:role :user/:assistant :content str}] to Gemini contents format [{role parts:[{text}]}]")
           :code $ quote
             defn messages->contents (messages)
               let
-                  messages0 $ if (some? messages) messages ([])
+                  messages0 $ if (js-present? messages) messages ([])
                 to-js-data $ map messages0
                   fn (m)
                     {}
@@ -824,34 +873,34 @@
                       :parts $ []
                         {} $ :text (:content m)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :list
-        |models-compute-tokens! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'List
+        |models-compute-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn models-compute-tokens! (client model contents config)
               hint-fn $ {} (:async true)
               .!computeTokens (.-models client)
                 js-object (:model model)
                   :contents $ maybe-to-js-data contents
-                  :config $ if (some? config) (maybe-to-js-data config) js/undefined
+                  :config $ if (js-present? config) (maybe-to-js-data config) js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string :dynamic (:: :optional 'GenerationConfig)
-        |models-count-tokens! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String 'Dynamic (:: 'Optional 'GenerationConfig)
+        |models-count-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn models-count-tokens! (client model contents config)
               hint-fn $ {} (:async true)
               .!countTokens (.-models client)
                 js-object (:model model)
                   :contents $ maybe-to-js-data contents
-                  :config $ if (some? config) (maybe-to-js-data config) js/undefined
+                  :config $ if (js-present? config) (maybe-to-js-data config) js/undefined
           :examples $ []
-          :schema $ :: :fn
+          :schema $ :: 'Fn
             {} (:return 'CountTokensResponse)
-              :args $ [] :dynamic :string :dynamic (:: :optional 'GenerationConfig)
-        |models-get! $ %{} :CodeEntry (:doc |)
+              :args $ [] 'Dynamic 'String 'Dynamic (:: 'Optional 'GenerationConfig)
+        |models-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn models-get! (client model cfg)
               hint-fn $ {} (:async true)
@@ -859,39 +908,39 @@
                 js-object (:model model)
                   :config $ request-config->js cfg
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic :string 'RequestConfig
-        |models-list! $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'String 'RequestConfig
+        |models-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn models-list! (client cfg)
               hint-fn $ {} (:async true)
               .!list (.-models client)
-                if (some? cfg)
+                if (js-present? cfg)
                   js-object $ :config (list-config->js cfg)
                   , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :dynamic 'ListParams
-        |new-client $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'Dynamic 'ListParams
+        |new-client $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn new-client (api-key)
               new GoogleGenAI $ js-object (:apiKey api-key)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :string
-        |new-client-with-base-url $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'String
+        |new-client-with-base-url $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn new-client-with-base-url (api-key base-url)
               new GoogleGenAI $ js-object (:apiKey api-key)
                 :httpOptions $ js-object (:baseUrl base-url)
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :string :string
-        |new-client-with-options $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'String 'String
+        |new-client-with-options $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn new-client-with-options (options)
               new GoogleGenAI $ js-object
@@ -902,10 +951,10 @@
                 :apiVersion $ or (:api-version options) js/undefined
                 :httpOptions $ or (:http-options options) js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'ClientOptions
-        |params->js $ %{} :CodeEntry (:doc |)
+        |params->js $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn params->js (p)
               let
@@ -925,45 +974,57 @@
                 js-object (:model model)
                   :input $ input->js input
                   :previous_interaction_id $ or prev-id js/undefined
-                  :system_instruction $ if (some? sys) (maybe-to-js-data sys) js/undefined
+                  :system_instruction $ if
+                    js-present? $ unsafe-coerce sys 'JsObject
+                    maybe-to-js-data sys
+                    , js/undefined
                   :agent $ or agent js/undefined
                   :background $ or background js/undefined
                   :store $ or (:store p) js/undefined
-                  :config $ generation-config->js gen-cfg
-                  :tools $ if (some? tools-v) (to-js-data tools-v) js/undefined
+                  :config $ if
+                    js-present? $ unsafe-coerce gen-cfg 'JsObject
+                    generation-config->js $ unsafe-coerce gen-cfg 'GenerationConfig
+                    , js/undefined
+                  :tools $ if
+                    js-present? $ unsafe-coerce tools-v 'JsObject
+                    to-js-data tools-v
+                    , js/undefined
                   :response_modalities $ or response-modalities js/undefined
                   :response_mime_type $ or response-mime-type js/undefined
-                  :response_format $ if (some? response-format) (maybe-to-js-data response-format) js/undefined
+                  :response_format $ if
+                    js-present? $ unsafe-coerce response-format 'JsObject
+                    maybe-to-js-data response-format
+                    , js/undefined
                   :abortSignal $ or signal js/undefined
                   :httpOptions $ or http-opts js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'CreateParams
-        |request-config->js $ %{} :CodeEntry (:doc |)
+        |request-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn request-config->js (cfg)
-              if (some? cfg)
+              if (js-present? cfg)
                 js-object
                   :httpOptions $ or (:http-options cfg) js/undefined
                   :abortSignal $ or (:abort-signal cfg) js/undefined
                 , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'RequestConfig
-        |text-part $ %{} :CodeEntry (:doc |)
+        |text-part $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn text-part (text)
               {} $ :text text
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
-              :args $ [] :string
-        |upload-file-config->js $ %{} :CodeEntry (:doc |)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
+              :args $ [] 'String
+        |upload-file-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote
             defn upload-file-config->js (cfg)
-              if (some? cfg)
+              if (js-present? cfg)
                 js-object
                   :name $ or (:name cfg) js/undefined
                   :mimeType $ or (:mime-type cfg) js/undefined
@@ -972,10 +1033,10 @@
                   :abortSignal $ or (:abort-signal cfg) js/undefined
                 , js/undefined
           :examples $ []
-          :schema $ :: :fn
-            {} (:return :dynamic)
+          :schema $ :: 'Fn
+            {} (:return 'Dynamic)
               :args $ [] 'UploadFileConfig
-      :ns $ %{} :NsEntry (:doc |)
+      :ns $ %{} 'NsEntry (:doc |)
         :code $ quote
           ns genai.sdk $ :require
             |@google/genai :refer $ GoogleGenAI

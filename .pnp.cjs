@@ -28,7 +28,7 @@ const RAW_RUNTIME_STATE =
       [null, {\
         "packageLocation": "./",\
         "packageDependencies": [\
-          ["@calcit/procs", "npm:0.13.19"],\
+          ["@calcit/procs", "npm:0.13.27"],\
           ["@google/genai", "virtual:dc3fc578bfa5e06182a4d2be39ede0bc5b74940b1ffe0d70c26892ab140a4699787750fba175dc306292e80b4aa2c8c5f68c2a821e69b2c37e360c0dff36ff66#npm:1.47.0"],\
           ["bottom-tip", "npm:0.1.5"],\
           ["root-workspace-0b6124", "workspace:."],\
@@ -38,10 +38,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@calcit/procs", [\
-      ["npm:0.13.19", {\
-        "packageLocation": "../../../.yarn/berry/cache/@calcit-procs-npm-0.13.19-f0c9ec9086-10c0.zip/node_modules/@calcit/procs/",\
+      ["npm:0.13.27", {\
+        "packageLocation": "../../../.yarn/berry/cache/@calcit-procs-npm-0.13.27-635c7c0e92-10c0.zip/node_modules/@calcit/procs/",\
         "packageDependencies": [\
-          ["@calcit/procs", "npm:0.13.19"],\
+          ["@calcit/procs", "npm:0.13.27"],\
           ["@calcit/ternary-tree", "npm:0.0.26"],\
           ["@cirru/parser.ts", "npm:0.0.9"],\
           ["@cirru/writer.ts", "npm:0.1.9"]\
@@ -1729,7 +1729,7 @@ const RAW_RUNTIME_STATE =
       ["workspace:.", {\
         "packageLocation": "./",\
         "packageDependencies": [\
-          ["@calcit/procs", "npm:0.13.19"],\
+          ["@calcit/procs", "npm:0.13.27"],\
           ["@google/genai", "virtual:dc3fc578bfa5e06182a4d2be39ede0bc5b74940b1ffe0d70c26892ab140a4699787750fba175dc306292e80b4aa2c8c5f68c2a821e69b2c37e360c0dff36ff66#npm:1.47.0"],\
           ["bottom-tip", "npm:0.1.5"],\
           ["root-workspace-0b6124", "workspace:."],\
