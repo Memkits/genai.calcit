@@ -12,7 +12,7 @@ cr js         # compile once to js-out/
 ### Run
 
 ```bash
-GEMINI_API_KEY=your_key node --require ./.pnp.cjs --loader ./.pnp.loader.mjs main.mjs
+GEMINI_API_KEY=your_key node main.mjs
 ```
 
 Set `GEMINI_BASE_URL` to override the API endpoint (e.g. for proxies).
