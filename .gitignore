@@ -4,6 +4,7 @@
 
 js-out/
 node_modules/
+.pnp.*
 dist/
 
 .DS_Store
@@ -13,4 +14,3 @@ calcit.cirru
 .yarn/
 
 .calcit-snippets/
-
