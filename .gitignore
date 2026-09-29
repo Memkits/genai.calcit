@@ -9,8 +9,6 @@ dist/
 
 .DS_Store
 
-calcit.cirru
-
 .yarn/
 
 .calcit-snippets/
