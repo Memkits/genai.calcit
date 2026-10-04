@@ -177,6 +177,8 @@ let
 
 ### Development
 
+CI 对默认 Node 和 web 入口执行严格检查、生成与原类型预算门禁，再构建前端资源。deprecated 报告已在原预算门禁中检查，不重复执行。COS 上传仅使用 Action 1.2 内置 `public-base-url` verify；PR 预览按 PR 编号/run/attempt 隔离，fork PR 仍构建但不上传。生产 COS 前缀与服务器 rsync 路径不变，串行队列保留待处理运行。此部署改进仍使用正式 Calcit/procs 0.27.0，不代表 0.28 类型迁移完成；不调用真实 Google API 验证部署。
+
 ```bash
 cr js       # compile once
 cr js -w    # watch mode
