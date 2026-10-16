@@ -6,7 +6,8 @@
 
 本分支使用已发布配对 Calcit/procs **0.30.1-alpha.4**（预发布），保留默认脚本入口和独立 Web 入口。
 正式模块为 Respo 0.16.122、UI 0.7.41、js-ffi 0.2.3；移除未被源码使用的 Reel。
-当前已迁移九个配置 Struct 的 `Option` 合同和请求序列化，但公共 SDK、结果归一化及 Web 尚未完成。
+已迁移配置及结果的 `Option` 合同、请求序列化和 SDK 响应归一化；SDK 公共定义在 Node/Web 下均为 92/92 通过。
+默认脚本与 Web 应用入口仍未完成，不能把公共 SDK 检查通过视为整个项目通过。
 不要把本候选用于发布或生产部署；具体待办见 [#8](https://github.com/Memkits/genai.calcit/issues/8)。
 
 配置字段使用 `Option :some value`，缺失的 Option 字段可以省略：
@@ -21,7 +22,7 @@ genai.sdk/CreateParams :model |fixture :input |hello
 
 `Some false` 不再因 `or` 被忽略；None 在 SDK 请求对象中省略。
 ContentConfig 的 `system-instruction` 放入 SDK 要求的 `config.systemInstruction`。
-`yarn test:config` 仅检查这两类离线请求对象，不读取密钥、不调用 Google 服务。
+`yarn test:config` 检查两类离线请求对象，并覆盖交互响应的真实 Struct/枚举、文本提取、零 token 值和未启用搜索工具的情况，不读取密钥、不调用 Google 服务。
 这项测试通过不代表整个 SDK 完成迁移；下面的历史 API 示例仍需随 #8 同步到 Option 和真实结果合同。
 
 源码只维护 `calcit.cirru` / `deps.cirru`。CI 保留 canonical、两个入口的全部定义、SDK 公共定义及完整 strict，
