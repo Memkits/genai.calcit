@@ -3,13 +3,17 @@
   :about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `calcit query` to inspect and `calcit edit`/`calcit tree` to modify. Run `calcit docs agents --contract` before mutations; use `--full` for first orientation or changed contract digest. Manual edits must follow format and schema conventions, then run `calcit edit format`."
   :package |genai
   :entries $ {}
-    :default $ {} (:description |) (:init-fn 'genai.main/main!) (:mode :native) (:reload-fn 'genai.main/reload!)
+    :default $ {} (:description |) (:init-fn 'genai.main/main!) (:mode :js) (:reload-fn 'genai.main/reload!) (:target :node)
       :feature-policy $ {}
-      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
+      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
       :type-slots $ {}
-    :web $ {} (:description |) (:init-fn 'genai.main/web-main!) (:mode :native) (:reload-fn 'genai.main/web-reload!)
+    :test-config $ {} (:description |) (:init-fn 'genai.test-config/main!) (:mode :js) (:reload-fn 'genai.test-config/main!) (:target :node)
       :feature-policy $ {}
-      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |reel.calcit/ |js-ffi/
+      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
+      :type-slots $ {}
+    :web $ {} (:description |) (:init-fn 'genai.main/web-main!) (:mode :js) (:reload-fn 'genai.main/web-reload!) (:target :browser)
+      :feature-policy $ {}
+      :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
       :type-slots $ {}
   :files $ {}
     'genai.main $ %{} 'FileEntry
@@ -121,18 +125,9 @@
                 let
                     base64 $ js-await $ read-as-base64 file
                     mime-type $ file :type
-                    cfg $ %{} sdk/ContentConfig (:model |gemini-1.5-flash)
-                      :contents $ [] $ {} (:role |user)
+                    cfg $ sdk/ContentConfig :model |gemini-1.5-flash :contents $ []
+                      {} (:role |user)
                         :parts $ [] (sdk/text-part "|请将这段音频转录为简体中文文字。") (sdk/inline-audio base64 mime-type)
-                      :system-instruction nil
-                      :thinking-config nil
-                      :tools nil
-                      :tool-config nil
-                      :response-modalities nil
-                      :response-mime-type nil
-                      :cached-content nil
-                      :abort-signal nil
-                      :http-options nil
                     response $ js-await $ sdk/generate-content! client cfg
                     text $ option:unwrap-or (sdk/extract-text response) nil
                   reset! *store $ assoc (assoc @*store :result text) :loading? false
@@ -155,7 +150,7 @@
                     client $ if (.some? base-url)
                       sdk/new-client-with-base-url key $ option:unwrap base-url
                       sdk/new-client key
-                    params $ %{} sdk/CreateParams (:model |gemini-2.5-flash) (:input "|Explain how AI works in a few words.") (:system-instruction nil) (:previous-interaction-id nil) (:agent nil) (:background nil) (:store nil) (:generation-config nil) (:tools nil) (:response-modalities nil) (:response-format nil) (:response-mime-type nil) (:abort-signal nil) (:http-options nil)
+                    params $ sdk/CreateParams :model |gemini-2.5-flash :input "|Explain how AI works in a few words."
                     interaction $ js-await $ sdk/interactions-create! client params
                     result $ sdk/extract-outputs interaction
                   println |Response: $ option:unwrap-or (get result :text) nil
@@ -286,28 +281,28 @@
           :schema $ :: 'Trait
         'ClientOptions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientOptions
-            :api-key $ :: 'Optional 'String
-            :vertexai $ :: 'Optional 'Bool
-            :project $ :: 'Optional 'String
-            :location $ :: 'Optional 'String
-            :api-version $ :: 'Optional 'String
-            :http-options $ :: 'Optional 'Dynamic
+            :api-key $ :: 'Option 'String
+            :vertexai $ :: 'Option 'Bool
+            :project $ :: 'Option 'String
+            :location $ :: 'Option 'String
+            :api-version $ :: 'Option 'String
+            :http-options $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'ContentConfig $ %{} 'CodeEntry
           :doc "|config struct for generateContent/generateContentStream, fields: model contents system-instruction thinking-config tools response-modalities response-mime-type abort-signal http-options"
           :code $ quote $ defstruct ContentConfig (:model 'String) (:contents 'Dynamic)
-            :system-instruction $ :: 'Optional 'Dynamic
-            :thinking-config $ :: 'Optional 'Dynamic
-            :tools $ :: 'Optional 'List
-            :tool-config $ :: 'Optional 'Dynamic
-            :response-modalities $ :: 'Optional 'List
-            :response-mime-type $ :: 'Optional 'String
-            :cached-content $ :: 'Optional 'String
-            :abort-signal $ :: 'Optional 'Dynamic
-            :http-options $ :: 'Optional 'Dynamic
+            :system-instruction $ :: 'Option 'Dynamic
+            :thinking-config $ :: 'Option 'Dynamic
+            :tools $ :: 'Option $ :: 'List 'Dynamic
+            :tool-config $ :: 'Option 'Dynamic
+            :response-modalities $ :: 'Option $ :: 'List 'Dynamic
+            :response-mime-type $ :: 'Option 'String
+            :cached-content $ :: 'Option 'String
+            :abort-signal $ :: 'Option 'Dynamic
+            :http-options $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'ContentHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ContentHost
             :parts $ :: 'JsNullish 'JsArray
@@ -325,34 +320,34 @@
           :schema $ :: 'Enum
         'CreateCachedContentConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct CreateCachedContentConfig
-            :ttl $ :: 'Optional 'String
-            :expire-time $ :: 'Optional 'String
-            :display-name $ :: 'Optional 'String
-            :contents $ :: 'Optional 'Dynamic
-            :system-instruction $ :: 'Optional 'Dynamic
-            :tools $ :: 'Optional 'List
-            :tool-config $ :: 'Optional 'Dynamic
-            :kms-key-name $ :: 'Optional 'String
-            :http-options $ :: 'Optional 'Dynamic
-            :abort-signal $ :: 'Optional 'Dynamic
+            :ttl $ :: 'Option 'String
+            :expire-time $ :: 'Option 'String
+            :display-name $ :: 'Option 'String
+            :contents $ :: 'Option 'Dynamic
+            :system-instruction $ :: 'Option 'Dynamic
+            :tools $ :: 'Option $ :: 'List 'Dynamic
+            :tool-config $ :: 'Option 'Dynamic
+            :kms-key-name $ :: 'Option 'String
+            :http-options $ :: 'Option 'Dynamic
+            :abort-signal $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'CreateParams $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct CreateParams (:model 'String) (:input 'Dynamic)
-            :system-instruction $ :: 'Optional 'Dynamic
-            :previous-interaction-id $ :: 'Optional 'String
-            :agent $ :: 'Optional 'String
-            :background $ :: 'Optional 'Bool
-            :store $ :: 'Optional 'Bool
-            :generation-config $ :: 'Optional GenerationConfig
-            :tools $ :: 'Optional 'List
-            :response-modalities $ :: 'Optional 'List
-            :response-format $ :: 'Optional 'Dynamic
-            :response-mime-type $ :: 'Optional 'String
-            :abort-signal $ :: 'Optional 'Dynamic
-            :http-options $ :: 'Optional 'Dynamic
+            :system-instruction $ :: 'Option 'Dynamic
+            :previous-interaction-id $ :: 'Option 'String
+            :agent $ :: 'Option 'String
+            :background $ :: 'Option 'Bool
+            :store $ :: 'Option 'Bool
+            :generation-config $ :: 'Option 'genai.sdk/GenerationConfig
+            :tools $ :: 'Option $ :: 'List 'Dynamic
+            :response-modalities $ :: 'Option $ :: 'List 'Dynamic
+            :response-format $ :: 'Option 'Dynamic
+            :response-mime-type $ :: 'Option 'String
+            :abort-signal $ :: 'Option 'Dynamic
+            :http-options $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'ExtractedInteractionOutput $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ExtractedInteractionOutput
             :text $ :: 'Optional 'String
@@ -396,15 +391,15 @@
           :schema $ :: 'Trait
         'GenerationConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct GenerationConfig
-            :temperature $ :: 'Optional 'Number
-            :max-output-tokens $ :: 'Optional 'Number
-            :top-p $ :: 'Optional 'Number
-            :top-k $ :: 'Optional 'Number
-            :candidate-count $ :: 'Optional 'Number
-            :stop-sequences $ :: 'Optional 'List
-            :response-mime-type $ :: 'Optional 'String
+            :temperature $ :: 'Option 'Number
+            :max-output-tokens $ :: 'Option 'Number
+            :top-p $ :: 'Option 'Number
+            :top-k $ :: 'Option 'Number
+            :candidate-count $ :: 'Option 'Number
+            :stop-sequences $ :: 'Option $ :: 'List 'Dynamic
+            :response-mime-type $ :: 'Option 'String
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'GoogleClientHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait GoogleClientHost (:caches 'genai.sdk/CachesHost) (:chats 'genai.sdk/ChatsHost) (:files 'genai.sdk/FilesHost) (:models 'genai.sdk/ModelsHost) (:interactions 'genai.sdk/InteractionsHost)
           :examples $ []
@@ -420,12 +415,12 @@
         'ImageGenConfig $ %{} 'CodeEntry
           :doc "|config struct for generateImages, fields: model prompt number-of-images include-rai-reason abort-signal http-options"
           :code $ quote $ defstruct ImageGenConfig (:model 'String) (:prompt 'String)
-            :number-of-images $ :: 'Optional 'Number
-            :include-rai-reason $ :: 'Optional 'Bool
-            :abort-signal $ :: 'Optional 'Dynamic
-            :http-options $ :: 'Optional 'Dynamic
+            :number-of-images $ :: 'Option 'Number
+            :include-rai-reason $ :: 'Option 'Bool
+            :abort-signal $ :: 'Option 'Dynamic
+            :http-options $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'Interaction $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Interaction (:id 'String) (:status InteractionStatus)
             :outputs $ :: 'Optional 'List
@@ -486,14 +481,14 @@
           :schema $ :: 'Trait
         'ListParams $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ListParams
-            :page-size $ :: 'Optional 'Number
-            :page-token $ :: 'Optional 'String
-            :filter $ :: 'Optional 'String
-            :query-base $ :: 'Optional 'Bool
-            :http-options $ :: 'Optional 'Dynamic
-            :abort-signal $ :: 'Optional 'Dynamic
+            :page-size $ :: 'Option 'Number
+            :page-token $ :: 'Option 'String
+            :filter $ :: 'Option 'String
+            :query-base $ :: 'Option 'Bool
+            :http-options $ :: 'Option 'Dynamic
+            :abort-signal $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'ModelsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ModelsHost
             .generateContent $ :: 'Fn $ {}
@@ -528,10 +523,10 @@
           :schema $ :: 'Trait
         'RequestConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct RequestConfig
-            :http-options $ :: 'Optional 'Dynamic
-            :abort-signal $ :: 'Optional 'Dynamic
+            :http-options $ :: 'Option 'Dynamic
+            :abort-signal $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'SdkUsage $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct SdkUsage
             :total_tokens $ :: 'Optional 'Number
@@ -568,13 +563,13 @@
           :schema $ :: 'Enum
         'UploadFileConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct UploadFileConfig
-            :name $ :: 'Optional 'String
-            :mime-type $ :: 'Optional 'String
-            :display-name $ :: 'Optional 'String
-            :http-options $ :: 'Optional 'Dynamic
-            :abort-signal $ :: 'Optional 'Dynamic
+            :name $ :: 'Option 'String
+            :mime-type $ :: 'Option 'String
+            :display-name $ :: 'Option 'String
+            :http-options $ :: 'Option 'Dynamic
+            :abort-signal $ :: 'Option 'Dynamic
           :examples $ []
-          :schema $ :: 'Enum
+          :schema $ :: 'StructDef
         'Usage $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Usage
             :input-tokens $ :: 'Optional 'Number
@@ -584,24 +579,22 @@
           :schema $ :: 'Enum
         'cached-content-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn cached-content-config->js (cfg)
-            if (js-present? cfg)
-              let
-                  contents $ :contents cfg
-                  sys $ :system-instruction cfg
-                  tools-v $ :tools cfg
-                  tool-config $ :tool-config cfg
-                js-object
-                  :ttl $ or (:ttl cfg) js/undefined
-                  :expireTime $ or (:expire-time cfg) js/undefined
-                  :displayName $ or (:display-name cfg) js/undefined
-                  :contents $ if (js-present? contents) (maybe-to-js-data contents) js/undefined
-                  :systemInstruction $ if (js-present? sys) (maybe-to-js-data sys) js/undefined
-                  :tools $ if (js-present? tools-v) (to-js-data tools-v) js/undefined
-                  :toolConfig $ if (js-present? tool-config) (maybe-to-js-data tool-config) js/undefined
-                  :kmsKeyName $ or (:kms-key-name cfg) js/undefined
-                  :httpOptions $ or (:http-options cfg) js/undefined
-                  :abortSignal $ or (:abort-signal cfg) js/undefined
-              , js/undefined
+            let
+                contents $ :contents cfg
+                sys $ :system-instruction cfg
+                tools-v $ :tools cfg
+                tool-config $ :tool-config cfg
+              js-object
+                :ttl $ option->js $ :ttl cfg
+                :expireTime $ option->js $ :expire-time cfg
+                :displayName $ option->js $ :display-name cfg
+                :contents $ option->js contents
+                :systemInstruction $ option->js sys
+                :tools $ option->js tools-v
+                :toolConfig $ option->js tool-config
+                :kmsKeyName $ option->js $ :kms-key-name cfg
+                :httpOptions $ option->js $ :http-options cfg
+                :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'CreateCachedContentConfig
@@ -704,16 +697,16 @@
                 http-opts $ :http-options cfg
               js-object (:model model)
                 :contents $ maybe-to-js-data contents
-                :systemInstruction $ if (some? sys) (maybe-to-js-data sys) js/undefined
                 :config $ js-object
-                  :thinkingConfig $ or thinking js/undefined
-                  :tools $ if (some? tools-v) (to-js-data tools-v) js/undefined
-                  :toolConfig $ if (some? tool-config) (maybe-to-js-data tool-config) js/undefined
-                  :responseModalities $ or modalities js/undefined
-                  :responseMimeType $ or mime-type js/undefined
-                  :cachedContent $ or cached-content js/undefined
-                  :abortSignal $ or signal js/undefined
-                  :httpOptions $ or http-opts js/undefined
+                  :systemInstruction $ option->js sys
+                  :thinkingConfig $ option->js thinking
+                  :tools $ option->js tools-v
+                  :toolConfig $ option->js tool-config
+                  :responseModalities $ option->js modalities
+                  :responseMimeType $ option->js mime-type
+                  :cachedContent $ option->js cached-content
+                  :abortSignal $ option->js signal
+                  :httpOptions $ option->js http-opts
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'ContentConfig
@@ -900,16 +893,14 @@
             :features $ #{} :js-ffi
         'generation-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn generation-config->js (cfg)
-            if (js-present? cfg)
-              js-object
-                :temperature $ or (:temperature cfg) js/undefined
-                :maxOutputTokens $ or (:max-output-tokens cfg) js/undefined
-                :topP $ or (:top-p cfg) js/undefined
-                :topK $ or (:top-k cfg) js/undefined
-                :candidateCount $ or (:candidate-count cfg) js/undefined
-                :stopSequences $ or (:stop-sequences cfg) js/undefined
-                :responseMimeType $ or (:response-mime-type cfg) js/undefined
-              , js/undefined
+            js-object
+              :temperature $ option->js $ :temperature cfg
+              :maxOutputTokens $ option->js $ :max-output-tokens cfg
+              :topP $ option->js $ :top-p cfg
+              :topK $ option->js $ :top-k cfg
+              :candidateCount $ option->js $ :candidate-count cfg
+              :stopSequences $ option->js $ :stop-sequences cfg
+              :responseMimeType $ option->js $ :response-mime-type cfg
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'GenerationConfig
@@ -971,15 +962,13 @@
             :features $ #{} :js-ffi
         'list-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn list-config->js (cfg)
-            if (js-present? cfg)
-              js-object
-                :httpOptions $ or (:http-options cfg) js/undefined
-                :abortSignal $ or (:abort-signal cfg) js/undefined
-                :pageSize $ or (:page-size cfg) js/undefined
-                :pageToken $ or (:page-token cfg) js/undefined
-                :filter $ or (:filter cfg) js/undefined
-                :queryBase $ or (:query-base cfg) js/undefined
-              , js/undefined
+            js-object
+              :httpOptions $ option->js $ :http-options cfg
+              :abortSignal $ option->js $ :abort-signal cfg
+              :pageSize $ option->js $ :page-size cfg
+              :pageToken $ option->js $ :page-token cfg
+              :filter $ option->js $ :filter cfg
+              :queryBase $ option->js $ :query-base cfg
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'ListParams
@@ -1120,17 +1109,27 @@
           :code $ quote $ defn new-client-with-options (options)
             unsafe-coerce
               new GoogleGenAI $ js-object
-                :apiKey $ or (:api-key options) js/undefined
-                :vertexai $ or (:vertexai options) js/undefined
-                :project $ or (:project options) js/undefined
-                :location $ or (:location options) js/undefined
-                :apiVersion $ or (:api-version options) js/undefined
-                :httpOptions $ or (:http-options options) js/undefined
+                :apiKey $ option->js $ :api-key options
+                :vertexai $ option->js $ :vertexai options
+                :project $ option->js $ :project options
+                :location $ option->js $ :location options
+                :apiVersion $ option->js $ :api-version options
+                :httpOptions $ option->js $ :http-options options
               , 'genai.sdk/GoogleClientHost
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'genai.sdk/GoogleClientHost)
             :args $ [] 'ClientOptions
             :features $ #{} :js-ffi
+        'option->js $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn option->js (value)
+            match value
+              (:some payload) (maybe-to-js-data payload)
+              (:none) js/undefined
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+            :args $ [] $ :: 'Option 'T
+            :features $ #{} :js-ffi
+            :generics $ [] 'T
         'params->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn params->js (p)
             let
@@ -1149,41 +1148,29 @@
                 http-opts $ :http-options p
               js-object (:model model)
                 :input $ input->js input
-                :previous_interaction_id $ or prev-id js/undefined
-                :system_instruction $ if
-                  js-present? $ unsafe-coerce sys 'JsObject
-                  maybe-to-js-data sys
-                  , js/undefined
-                :agent $ or agent js/undefined
-                :background $ or background js/undefined
-                :store $ or (:store p) js/undefined
-                :config $ if
-                  js-present? $ unsafe-coerce gen-cfg 'JsObject
-                  generation-config->js $ unsafe-coerce gen-cfg 'GenerationConfig
-                  , js/undefined
-                :tools $ if
-                  js-present? $ unsafe-coerce tools-v 'JsObject
-                  to-js-data tools-v
-                  , js/undefined
-                :response_modalities $ or response-modalities js/undefined
-                :response_mime_type $ or response-mime-type js/undefined
-                :response_format $ if
-                  js-present? $ unsafe-coerce response-format 'JsObject
-                  maybe-to-js-data response-format
-                  , js/undefined
-                :abortSignal $ or signal js/undefined
-                :httpOptions $ or http-opts js/undefined
+                :previous_interaction_id $ option->js prev-id
+                :system_instruction $ option->js sys
+                :agent $ option->js agent
+                :background $ option->js background
+                :store $ option->js $ :store p
+                :config $ match gen-cfg
+                  (:some config) (generation-config->js config)
+                  (:none) js/undefined
+                :tools $ option->js tools-v
+                :response_modalities $ option->js response-modalities
+                :response_mime_type $ option->js response-mime-type
+                :response_format $ option->js response-format
+                :abortSignal $ option->js signal
+                :httpOptions $ option->js http-opts
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'CreateParams
             :features $ #{} :js-ffi
         'request-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn request-config->js (cfg)
-            if (js-present? cfg)
-              js-object
-                :httpOptions $ or (:http-options cfg) js/undefined
-                :abortSignal $ or (:abort-signal cfg) js/undefined
-              , js/undefined
+            js-object
+              :httpOptions $ option->js $ :http-options cfg
+              :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'RequestConfig
@@ -1196,14 +1183,12 @@
             :args $ [] 'String
         'upload-file-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn upload-file-config->js (cfg)
-            if (js-present? cfg)
-              js-object
-                :name $ or (:name cfg) js/undefined
-                :mimeType $ or (:mime-type cfg) js/undefined
-                :displayName $ or (:display-name cfg) js/undefined
-                :httpOptions $ or (:http-options cfg) js/undefined
-                :abortSignal $ or (:abort-signal cfg) js/undefined
-              , js/undefined
+            js-object
+              :name $ option->js $ :name cfg
+              :mimeType $ option->js $ :mime-type cfg
+              :displayName $ option->js $ :display-name cfg
+              :httpOptions $ option->js $ :http-options cfg
+              :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'UploadFileConfig
@@ -1211,3 +1196,37 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns genai.sdk
           :require $ |@google/genai :refer $ GoogleGenAI
+    'genai.test-config $ %{} 'FileEntry
+      :defs $ {} $ 'main!
+        %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn main! ()
+            assert=
+              {} (:model |fixture)
+                :input $ [] $ {} (:type |text) (:text |hello)
+                :background false
+                :store false
+                :config $ {} (:temperature 0) (:maxOutputTokens 12)
+              match
+                try-parse-json $ js-ffi.contract/expect-string |request-json $ js/JSON.stringify
+                  genai.sdk/params->js $ genai.sdk/CreateParams :model |fixture :input |hello :background (Option :some false) :store (Option :some false) :generation-config $ Option :some
+                    genai.sdk/GenerationConfig :temperature (Option :some 0) :max-output-tokens $ Option :some 12
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert=
+              {} (:model |fixture) (:contents |hello)
+                :config $ {} (:systemInstruction |system)
+                  :responseModalities $ [] |TEXT
+              match
+                try-parse-json $ js-ffi.contract/expect-string |content-json $ js/JSON.stringify
+                  genai.sdk/content-config->js $ genai.sdk/ContentConfig :model |fixture :contents |hello :system-instruction (Option :some |system) :response-modalities $ Option :some ([] |TEXT)
+                (:ok payload) payload
+                (:err message) (raise message)
+            println |Offline-request-config-tests-passed
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ []
+            :features $ #{} :js-ffi
+      :ns $ %{} 'NsEntry (:doc |)
+        :code $ quote $ ns genai.test-config
+          :require (genai.sdk :as sdk) (js-ffi.contract :as contract)
