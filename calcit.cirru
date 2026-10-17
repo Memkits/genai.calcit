@@ -684,7 +684,7 @@
             decode-map-as
               map
                 decode-map-as
-                  tagging-edn $ to-calcit-data $ .getHistory chat
+                  tagging-edn $ to-calcit-data (.getHistory chat) true
                   :: 'List $ :: 'Map 'Tag 'Dynamic
                 fn (row)
                   select-present-fields row $ [] :role :parts
@@ -767,7 +767,7 @@
           :code $ quote $ defn extract-content-parts (result)
             let
                 data $ decode-map-as
-                  tagging-edn $ to-calcit-data result
+                  tagging-edn $ to-calcit-data result true
                   :: 'Map 'Tag 'Dynamic
               match
                 get-in data $ [] :candidates 0 :content :parts
@@ -785,7 +785,7 @@
           :code $ quote $ defn extract-image-bytes (result)
             let
                 data $ decode-map-as
-                  tagging-edn $ to-calcit-data result
+                  tagging-edn $ to-calcit-data result true
                   :: 'Map 'Tag 'Dynamic
               match
                 get-in data $ [] :generatedImages 0 :image :imageBytes
@@ -827,7 +827,7 @@
           :code $ quote $ defn extract-stream-chunk (chunk)
             let
                 data $ decode-map-as
-                  tagging-edn $ to-calcit-data chunk
+                  tagging-edn $ to-calcit-data chunk true
                   :: 'Map 'Tag 'Dynamic
                 part $ match
                   get-in data $ [] :candidates 0 :content :parts 0
@@ -1241,7 +1241,7 @@
             decode-map-as
               select-present-fields
                 decode-map-as
-                  tagging-edn $ to-calcit-data value
+                  tagging-edn $ to-calcit-data value true
                   :: 'Map 'Tag 'Dynamic
                 [] :totalTokens :sdkHttpResponse
               , 'genai.sdk/CountTokensResponse
@@ -1253,7 +1253,7 @@
           :code $ quote $ defn normalize-interaction (value)
             let
                 data $ decode-map-as
-                  tagging-edn $ to-calcit-data value
+                  tagging-edn $ to-calcit-data value true
                   :: 'Map 'Tag 'Dynamic
                 fields $ select-present-fields data $ [] :id :status :outputs :model :created :updated :role :object :usage
                 status $ read-status $ decode-map-as
@@ -1427,11 +1427,11 @@
                 (:err message) (raise message)
             let
                 result $ genai.sdk/normalize-interaction $ js-object (:id |fixture-id) (:status |completed) (:unmodeled true)
-                  :outputs $ js-array $ js-object (:type |text) (:text |hello)
+                  :outputs $ js-array $ js-object (:type |text) (:text |:keyword)
                   :usage $ js-object (:total_tokens 0) (:total_input_tokens nil)
                     :output_tokens_by_modality $ js-array
                     :future_field true
-              assert= (Option :some |hello)
+              assert= (Option :some |:keyword)
                 :text $ genai.sdk/extract-outputs result
               assert= |fixture-id $ :id result
               assert= (genai.sdk/InteractionStatus :completed) (:status result)
