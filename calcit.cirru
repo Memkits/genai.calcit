@@ -19,10 +19,17 @@
     'genai.main $ %{} 'FileEntry
       :defs $ {}
         '*store $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def *store
-            atom $ {} (:result nil) (:loading? false) (:error-msg nil)
+          :code $ quote $ defref *store
+            AppState :result (Option :none) :loading? false :error-msg $ Option :none
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
+          :schema $ :: 'Ref 'genai.main/AppState
+        'AppState $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct AppState
+            :result $ :: 'Option 'String
+            :loading? 'Bool
+            :error-msg $ :: 'Option 'String
+          :examples $ []
+          :schema $ :: 'StructDef
         'BrowserFileHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait BrowserFileHost (:type 'String)
           :examples $ []
@@ -59,7 +66,7 @@
                 window-host $ unsafe-coerce js/window 'JsObject
                 raw $ js-get window-host key
               if (js-nullish? raw) (Option :none)
-                Option :some $ unsafe-coerce raw 'String
+                Option :some $ js-ffi.contract/expect-string |GEMINI_API_KEY raw
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ []
@@ -83,17 +90,20 @@
                           event-first-file $ option:unwrap-or (get e :event) nil
                           (:none) &unit
                           (:some file) (on-transcribe file)
-              if (some? error-msg)
+              if (.some? error-msg)
                 div
                   {} $ :style $ {} (:color |red) (:margin-top |10px)
-                  <> error-msg
-              if (some? result)
+                  <> $ .unwrap error-msg
+              if (.some? result)
                 div
                   {} $ :style $ {} (:margin-top |20px) (:padding |15px) (:border "|1px solid #eee") (:border-radius |4px) (:background-color |#f9f9f9) (:white-space |pre-wrap) (:min-height |100px)
-                  <> result
+                  <> $ .unwrap result
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'Dynamic 'Bool 'Dynamic 'Dynamic
+            :args $ [] (:: 'Option 'String) 'Bool (:: 'Option 'String)
+              :: 'Fn $ {} (:return 'Unit)
+                :args $ [] 'genai.main/BrowserFileHost
+                :features $ #{} :js-ffi
             :features $ #{} :js-ffi
         'event-first-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn event-first-file (event)
@@ -118,22 +128,26 @@
             :return $ :: 'calcit.core/Option 'genai.main/BrowserFileHost
         'handle-transcribe! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn handle-transcribe! (client file)
-            hint-fn $ {} $ :async true
-            do
-              reset! *store $ assoc (assoc @*store :loading? true) :error-msg nil
-              try
-                let
-                    base64 $ js-await $ read-as-base64 file
-                    mime-type $ file :type
-                    cfg $ sdk/ContentConfig :model |gemini-1.5-flash :contents $ []
-                      {} (:role |user)
-                        :parts $ [] (sdk/text-part "|请将这段音频转录为简体中文文字。") (sdk/inline-audio base64 mime-type)
-                    response $ js-await $ sdk/generate-content! client cfg
-                    text $ option:unwrap-or (sdk/extract-text response) nil
-                  reset! *store $ assoc (assoc @*store :result text) :loading? false
-                fn (err)
-                  do (js/console.error err)
-                    reset! *store $ assoc (assoc @*store :loading? false) :error-msg $ str err
+            hint-fn $ {} (:async true) (:return 'Unit)
+              :args $ [] 'genai.sdk/GoogleClientHost 'genai.main/BrowserFileHost
+              :features $ #{} :js-ffi
+            reset! *store $ assoc (assoc @*store :loading? true) :error-msg $ Option :none
+            try
+              let
+                  base64 $ js-await $ read-as-base64 file
+                  mime-type $ .-type file
+                  cfg $ sdk/ContentConfig :model |gemini-1.5-flash :contents $ []
+                    {} (:role |user)
+                      :parts $ [] (sdk/text-part "|请将这段音频转录为简体中文文字。") (sdk/inline-audio base64 mime-type)
+                  response $ js-await $ sdk/generate-content! client cfg
+                reset! *store $ assoc
+                  assoc @*store :result $ sdk/extract-text response
+                  , :loading? false
+                , &unit
+              fn (err) (js/console.error err)
+                reset! *store $ assoc (assoc @*store :loading? false) :error-msg $ Option :some (str err)
+                , &unit
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'genai.sdk/GoogleClientHost 'genai.main/BrowserFileHost
@@ -153,29 +167,31 @@
                     params $ sdk/CreateParams :model |gemini-2.5-flash :input "|Explain how AI works in a few words."
                     interaction $ js-await $ sdk/interactions-create! client params
                     result $ sdk/extract-outputs interaction
-                  println |Response: $ option:unwrap-or (get result :text) nil
-                  println |Status: $ option:unwrap-or (get result :status) nil
-                  println |Interaction-id: $ option:unwrap-or (get result :interaction-id) nil
+                  println |Response: $ .unwrap-or (:text result) |
+                  println |Status: $ :status result
+                  println |Interaction-id: $ :interaction-id result
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
         'read-as-base64 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-as-base64 (file)
-            hint-fn $ {} $ :async true
-            js-await $ new js/Promise $ fn (resolve reject)
-              let
-                  reader $ unsafe-coerce (new js/FileReader) 'genai.main/FileReaderHost
-                js-set reader :onload $ fn (e)
-                  let
-                      raw-result $ reader :result
-                    if (js-present? raw-result)
-                      let
-                          data-url $ unsafe-coerce raw-result 'String
-                        resolve $ nth (split data-url |,) 1
-                      reject "|FileReader completed without a data URL"
-                js-set reader :onerror $ fn (e) (reject e)
-                reader .read-as-data-url! file
+            hint-fn $ {} (:async true) (:return 'String)
+              :args $ [] 'genai.main/BrowserFileHost
+              :features $ #{} :js-ffi
+            js-ffi.contract/expect-string |FileReader-base64 $ js-await $ new js/Promise
+              fn (resolve reject)
+                let
+                    reader $ unsafe-coerce (new js/FileReader) 'genai.main/FileReaderHost
+                  js-set reader :onload $ fn (e)
+                    match
+                      js-nullish->option $ .-result reader
+                      (:none) (reject "|FileReader completed without a data URL")
+                      (:some data-url)
+                        resolve $ .unwrap $ nth (split data-url |,) 1
+                  js-set reader :onerror $ fn (e) (reject e)
+                  .read-as-data-url! reader file
           :examples $ []
           :schema $ :: 'Fn $ {} (:async true) (:return 'String)
             :args $ [] 'genai.main/BrowserFileHost
@@ -187,45 +203,52 @@
             :args $ []
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
-            render! (respo.main/query-mount-target)
-              comp-container
-                option:unwrap-or (get @*store :result) nil
-                option:unwrap-or (get @*store :loading?) false
-                option:unwrap-or (get @*store :error-msg) nil
+            render!
+              .unwrap $ respo.ffi.browser/query-selector |.app
+              comp-container (:result @*store) (:loading? @*store) (:error-msg @*store)
                 fn (file)
+                  hint-fn $ {} (:return 'Unit)
+                    :args $ [] 'genai.main/BrowserFileHost
+                    :features $ #{} :js-ffi
                   let
                       api-key $ match (get-env |GEMINI_API_KEY)
                         (:some key) (Option :some key)
                         (:none) (browser-api-key)
                     match api-key
-                      (:none) (swap! *store assoc :error-msg "|Missing GEMINI_API_KEY")
+                      (:none)
+                        do
+                          swap! *store assoc :error-msg $ Option :some "|Missing GEMINI_API_KEY"
+                          , &unit
                       (:some key)
-                        let
-                            client $ sdk/new-client key
-                          handle-transcribe! client file
+                        do
+                          handle-transcribe! (sdk/new-client key) file
+                          , &unit
               fn (op) &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
         'web-main! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn web-main! ()
-            do (println "|Web app started.") (render-app!)
-              add-watch *store :rerender $ fn (s r) (render-app!)
+          :code $ quote $ defn web-main! () (println "|Web app started.") (render-app!)
+            add-watch! *store :rerender $ fn (_next _previous) (render-app!)
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+            :features $ #{} :js-ffi
         'web-reload! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn web-reload! ()
-            do (clear-cache!) (render-app!) (println |web-reloaded)
+          :code $ quote $ defn web-reload! () (clear-cache!) (render-app!) (println |web-reloaded)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+            :features $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns genai.main
           :require (genai.sdk :as sdk)
             respo.core :refer $ render! clear-cache! defcomp <> div button input span
             respo-ui.core :as ui
+            respo.ffi.browser :as dom
+            js-ffi.contract :as contract
     'genai.sdk $ %{} 'FileEntry
       :defs $ {}
         'CachesHost $ %{} 'CodeEntry (:doc |)
@@ -539,6 +562,9 @@
             :total_output_tokens $ :: 'Option 'Number
             :total_tool_use_tokens $ :: 'Option 'Number
             :total_thought_tokens $ :: 'Option 'Number
+            :cached_tokens_by_modality $ :: 'Option $ :: 'List (:: 'Map 'Tag 'Dynamic)
+            :output_tokens_by_modality $ :: 'Option $ :: 'List (:: 'Map 'Tag 'Dynamic)
+            :tool_use_tokens_by_modality $ :: 'Option $ :: 'List (:: 'Map 'Tag 'Dynamic)
           :examples $ []
           :schema $ :: 'StructDef
         'StreamChunkOutput $ %{} 'CodeEntry (:doc |)
@@ -699,11 +725,11 @@
             .create (.-chats client)
               js-object (:model model)
                 :config $ option-map->js config generation-config->js
-                :history $ option->js history
+                :history $ option-map->js history history->js
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'genai.sdk/ChatHost)
             :args $ [] 'genai.sdk/GoogleClientHost 'String (:: 'Option 'genai.sdk/GenerationConfig)
-              :: 'Option $ :: 'List 'Dynamic
+              :: 'Option $ :: 'List 'genai.sdk/ChatHistoryTurn
             :features $ #{} :js-ffi
         'content-config->js $ %{} 'CodeEntry
           :doc "|converts ContentConfig struct to JS object for SDK calls, maps fields to camelCase JS properties"
@@ -942,7 +968,7 @@
                   :config $ js-object (:numberOfImages num-images)
                     :includeRaiReason $ option->js include-rai
                     :httpOptions $ option->js http-opts
-                    :signal $ option->js signal
+                    :abortSignal $ option->js signal
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'genai.sdk/GoogleClientHost 'genai.sdk/ImageGenConfig
@@ -960,6 +986,16 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'genai.sdk/GenerationConfig
+            :features $ #{} :js-ffi
+        'history->js $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn history->js (history)
+            to-js-data $ map history $ fn (turn)
+              js-object
+                :role $ option->js $ :role turn
+                :parts $ option->js $ :parts turn
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+            :args $ [] $ :: 'List 'genai.sdk/ChatHistoryTurn
             :features $ #{} :js-ffi
         'inline-audio $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn inline-audio (data mime-type)
@@ -1221,9 +1257,15 @@
                   :: 'Map 'Tag 'Dynamic
                 fields $ select-present-fields data $ [] :id :status :outputs :model :created :updated :role :object :usage
                 status $ read-status $ decode-map-as
-                  option:unwrap $ get data :status
+                  .unwrap $ get data :status
                   , 'String
-              decode-map-as (assoc fields :status status) 'genai.sdk/InteractionResult
+                normalized $ match (get fields :usage)
+                  (:none) fields
+                  (:some usage)
+                    assoc fields :usage $ select-present-fields
+                      decode-map-as usage $ :: 'Map 'Tag 'Dynamic
+                      [] :total_tokens :total_input_tokens :input_tokens_by_modality :total_cached_tokens :total_output_tokens :total_tool_use_tokens :total_thought_tokens :cached_tokens_by_modality :output_tokens_by_modality :tool_use_tokens_by_modality
+              decode-map-as (assoc normalized :status status) 'genai.sdk/InteractionResult
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'genai.sdk/InteractionResult)
             :args $ [] 'Dynamic
@@ -1386,13 +1428,27 @@
             let
                 result $ genai.sdk/normalize-interaction $ js-object (:id |fixture-id) (:status |completed) (:unmodeled true)
                   :outputs $ js-array $ js-object (:type |text) (:text |hello)
+                  :usage $ js-object (:total_tokens 0) (:total_input_tokens nil)
+                    :output_tokens_by_modality $ js-array
+                    :future_field true
               assert= (Option :some |hello)
                 :text $ genai.sdk/extract-outputs result
               assert= |fixture-id $ :id result
               assert= (genai.sdk/InteractionStatus :completed) (:status result)
+              assert= (Option :some 0)
+                :total_tokens $ .unwrap $ :usage result
             assert= (Option :some 0)
               :totalTokens $ genai.sdk/normalize-count-tokens $ js-object (:totalTokens 0) (:cachedContentTokenCount 99)
             assert= (Option :none) (genai.sdk/make-search-tools false false)
+            assert=
+              [] $ {} (:role |user)
+                :parts $ [] $ {} (:text |hello)
+              match
+                try-parse-json $ js-ffi.contract/expect-string |history-json $ js/JSON.stringify
+                  genai.sdk/history->js $ [] $ genai.sdk/ChatHistoryTurn :role (Option :some |user) :parts
+                    Option :some $ [] $ {} (:text |hello)
+                (:ok payload) payload
+                (:err message) (raise message)
             println |Offline-request-config-tests-passed
             , &unit
           :examples $ []

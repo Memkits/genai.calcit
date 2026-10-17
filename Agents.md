@@ -46,4 +46,5 @@ calcit docs read Respo-Agent.md --full --module respo.calcit
   - 脚本入口：`calcit js`（node target）
   - Web 入口：`calcit --entry web js`（browser target）
 - 开发时保持两条链路都可用：修 Web 不破坏脚本，修脚本不破坏 Web。
-- `test-config` 是纯离线请求对象回归入口，不能代替默认/Web 和公共 SDK 全量门禁；未全部完成时保留 draft，不发布或部署。
+- `test-config` 是纯离线请求/响应回归入口，不能代替默认/Web 和公共 SDK 全量门禁；未全部完成时保留 draft，不发布或部署。
+- 双 target 门禁：Node 检查默认可达入口及全部公共 SDK，Web 检查全部项目定义及全部公共 SDK；`fix --workflow strict --verify` 一次覆盖全部入口。不要在 Node 上强行检查 Web DOM 闭包，也不要删除 Web 全量门禁。

@@ -53,12 +53,13 @@ jobs:
         test ! -e package.cirru
         calcit calcit.cirru edit format
         git diff --exit-code -- calcit.cirru
-        calcit calcit.cirru --check-only --all-defs
+        # Node checks its executable entry and the entire public SDK. Browser-only
+        # definitions are covered by Web --all-defs, not incorrectly run as Node.
+        calcit calcit.cirru --check-only
         calcit calcit.cirru --entry web --check-only --all-defs
         calcit calcit.cirru --check-only --ns genai.sdk --summary-only
         calcit calcit.cirru --entry web --check-only --ns genai.sdk --summary-only
         calcit calcit.cirru fix --workflow strict --verify
-        calcit calcit.cirru --entry web fix --workflow strict --verify
         yarn compile
         yarn compile:web
 
