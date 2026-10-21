@@ -8,6 +8,8 @@ CLI / `@calcit/procs` 配对正式 **0.30.1**，直接依赖固定为已发布�
 Respo 0.16.124、JS-FFI 0.2.5，Router 0.8.37 为传递依赖。
 请重新安装整张图、生成 JS 并完整刷新，不混用 alpha 缓存；UI 升级可能有样式差异，
 不承诺逐像素相同。SDK 依赖及锁定结果、模型和 API 版本均保持不变。
+构建工具从旧 Vite 8.0.3 升级到正式 8.3.5；其 Rolldown 传递依赖随 lock 更新，
+不为旧 WASM 可选后端的 peer 警告额外添加业务依赖。
 
 本轮不修改应用 Snapshot、公开 Option/Struct 合同、离线请求/响应断言或 Node/Web/test-config
 三入口。保留双 target 和公共 SDK 门禁，CI 显式启用 fail-fast/pipefail，不新增验证脚本、
