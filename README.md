@@ -2,10 +2,22 @@
 
 面向 `@google/genai` 的 Calcit JavaScript 绑定，包含 Node 脚本和独立 Web 音频转录示例。
 
-## 0.30.1 迁移影响
+## 本轮正式 0.30.1：使用者影响
 
-本候选使用已发布的配对 Calcit / `@calcit/procs` **0.30.1-alpha.4**（编译器预发布），模块使用正式 tag：
-Respo 0.16.122、UI 0.7.41、js-ffi 0.2.3。SDK 保持 1.47.0 系列；不升级模型或 API 版本。
+CLI / `@calcit/procs` 配对正式 **0.30.1**，直接依赖固定为已发布的 UI 0.8.0、
+Respo 0.16.124、JS-FFI 0.2.5，Router 0.8.37 为传递依赖。
+请重新安装整张图、生成 JS 并完整刷新，不混用 alpha 缓存；UI 升级可能有样式差异，
+不承诺逐像素相同。SDK 依赖及锁定结果、模型和 API 版本均保持不变。
+
+本轮不修改应用 Snapshot、公开 Option/Struct 合同、离线请求/响应断言或 Node/Web/test-config
+三入口。保留双 target 和公共 SDK 门禁，CI 显式启用 fail-fast/pipefail，不新增验证脚本、
+预算、强转或 concurrently。COS 仅使用 action 自带 verify，部署路径不变。
+不配置密钥、不调用 Google/付费 API、不上传音频到远端，不合并、部署或发版。
+
+## 历史：此前已合并的 Option 与 SDK 合同迁移
+
+此前源码迁移使用 0.30.1-alpha.4 配对 Respo 0.16.122、UI 0.7.41、JS-FFI 0.2.3；
+旧验收不代表本轮正式图已通过。
 
 这是有调用方影响的类型迁移，不能按旧的 nil/Map/JS 属性写法直接使用：
 
