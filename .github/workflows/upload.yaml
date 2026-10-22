@@ -42,6 +42,7 @@ jobs:
 
     - name: Install paired dependencies and test offline request objects
       run: |
+        set -euo pipefail
         caps --strict --ci
         yarn install --immutable
         caps deps.cirru verify --toolchain
@@ -49,6 +50,7 @@ jobs:
 
     - name: Validate canonical source and both entry contracts
       run: |
+        set -euo pipefail
         test ! -e compact.cirru
         test ! -e package.cirru
         calcit calcit.cirru edit format
@@ -68,6 +70,7 @@ jobs:
       env:
         PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
+        set -euo pipefail
         if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
           asset_prefix="${GITHUB_REPOSITORY}/pr/${PR_NUMBER}/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/"
         elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
