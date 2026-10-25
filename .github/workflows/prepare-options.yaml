@@ -1,0 +1,66 @@
+name: Protected GenAI Option method migration
+on:
+  push:
+    branches: [prepare/genai-option-methods-0301]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6.5.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: calcit-lang/setup-calcit@v1.5.0
+        with:
+          deps-file: deps.cirru
+          tools: calcit,caps
+          caps-version: "0.1.1"
+      - run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare yarn@4.18.0 --activate
+          caps --strict --ci
+          yarn install --immutable
+          caps deps.cirru verify --toolchain
+          node prepare-source.mjs apply
+      - name: Original offline assertions and separate Node/Web gates
+        run: |
+          set -euo pipefail
+          yarn test:config
+          before_blob="$(git hash-object calcit.cirru)"
+          calcit calcit.cirru edit format
+          test "$(git hash-object calcit.cirru)" = "$before_blob"
+          calcit calcit.cirru --check-only
+          calcit calcit.cirru --entry web --check-only --all-defs
+          calcit calcit.cirru --check-only --ns genai.sdk --summary-only
+          calcit calcit.cirru --entry web --check-only --ns genai.sdk --summary-only
+          calcit calcit.cirru fix --workflow strict --verify --format json | tee acceptance/strict.json
+          yarn compile
+          yarn compile:web
+      - name: Original frontend build and full source guards
+        env:
+          VITE_BASE_URL: ./
+        run: |
+          set -euo pipefail
+          yarn build
+          node prepare-source.mjs verify
+      - uses: actions/upload-artifact@v7.0.2
+        if: success()
+        with:
+          name: genai-option-accepted-source
+          path: calcit.cirru
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: genai-option-diagnostics
+          path: acceptance
+          if-no-files-found: error
+          retention-days: 30
