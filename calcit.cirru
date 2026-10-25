@@ -87,7 +87,7 @@
                     input $ {} (:type |file) (:accept |audio/*)
                       :on-change $ fn (e d!)
                         match
-                          event-first-file $ option:unwrap-or (get e :event) nil
+                          event-first-file $ .unwrap-or (get e :event) nil
                           (:none) &unit
                           (:some file) (on-transcribe file)
               if (.some? error-msg)
@@ -160,9 +160,9 @@
                 base-url $ get-env |GEMINI_BASE_URL
               if (.none? api-key) (raise "|GEMINI_API_KEY not set")
                 let
-                    key $ option:unwrap api-key
+                    key $ .unwrap api-key
                     client $ if (.some? base-url)
-                      sdk/new-client-with-base-url key $ option:unwrap base-url
+                      sdk/new-client-with-base-url key $ .unwrap base-url
                       sdk/new-client key
                     params $ sdk/CreateParams :model |gemini-2.5-flash :input "|Explain how AI works in a few words."
                     interaction $ js-await $ sdk/interactions-create! client params
@@ -1137,10 +1137,10 @@
             to-js-data $ map messages $ fn (message)
               let
                   role $ decode-map-as
-                    option:unwrap $ get message :role
+                    .unwrap $ get message :role
                     , 'Tag
                   text $ decode-map-as
-                    option:unwrap $ get message :content
+                    .unwrap $ get message :content
                     , 'String
                 {}
                   :role $ if (= role :assistant) |model |user

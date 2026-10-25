@@ -2,7 +2,16 @@
 
 面向 `@google/genai` 的 Calcit JavaScript 绑定，包含 Node 脚本和独立 Web 音频转录示例。
 
-## 本轮正式 0.30.1：使用者影响
+## 本轮 Option 方法写法：使用者影响
+
+在既有正式 0.30.1 图上，将 UI 事件默认值、Node 环境变量与 SDK 消息字段查询中的
+五处 `option:unwrap` / `option:unwrap-or` 改为 `.unwrap` / `.unwrap-or`。
+仅修改调用头，保留参数、默认值、缺失值行为、公开类型和三个入口；不升级 SDK、模型或依赖。
+原离线断言、Node/Web 检查、公共 SDK 检查、完整 strict 与构建通过，
+但离线断言不直接执行这五处 UI/环境变量/消息转换路径，不代表真实 Google 服务或音频上传验收。
+不新增验证脚本或工作流，不合并、部署或发版。
+
+## 此前正式 0.30.1 配对
 
 CLI / `@calcit/procs` 配对正式 **0.30.1**，直接依赖固定为已发布的 UI 0.8.0、
 Respo 0.16.124、JS-FFI 0.2.5，Router 0.8.37 为传递依赖。
@@ -11,7 +20,7 @@ Respo 0.16.124、JS-FFI 0.2.5，Router 0.8.37 为传递依赖。
 构建工具从旧 Vite 8.0.3 升级到正式 8.3.5；其 Rolldown 传递依赖随 lock 更新，
 不为旧 WASM 可选后端的 peer 警告额外添加业务依赖。
 
-本轮不修改应用 Snapshot、公开 Option/Struct 合同、离线请求/响应断言或 Node/Web/test-config
+此前配对未修改应用 Snapshot、公开 Option/Struct 合同、离线请求/响应断言或 Node/Web/test-config
 三入口。保留双 target 和公共 SDK 门禁，CI 显式启用 fail-fast/pipefail，不新增验证脚本、
 预算、强转或 concurrently。COS 仅使用 action 自带 verify，部署路径不变。
 不配置密钥、不调用 Google/付费 API、不上传音频到远端，不合并、部署或发版。
