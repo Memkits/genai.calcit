@@ -1,0 +1,53 @@
+name: Prepare GenAI public fold
+on:
+  push:
+    branches: [prepare/genai-fold-0301]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6.5.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: |
+          corepack enable
+          corepack prepare yarn@4.18.0 --activate
+      - uses: calcit-lang/setup-calcit@v1.5.0
+        with:
+          tools: calcit,caps
+          caps-version: "0.1.1"
+          deps-file: deps.cirru
+      - name: Original exact formal graph
+        run: |
+          set -euo pipefail
+          test "$(calcit -v)" = 0.30.1
+          caps --strict --ci
+          yarn install --immutable
+          caps deps.cirru verify --toolchain
+      - run: node prepare-source.mjs before
+      - run: node prepare-source.mjs gates before
+      - run: node prepare-source.mjs apply
+      - run: node prepare-source.mjs gates after
+      - run: node prepare-source.mjs after
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: accepted-source
+          path: calcit.cirru
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: accepted-runtime
+          path: dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.1
+        if: always()
+        with:
+          name: diagnostics
+          path: acceptance/
+          if-no-files-found: error
