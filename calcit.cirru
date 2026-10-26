@@ -1364,7 +1364,7 @@
             :features $ #{} :js-ffi
         'select-present-fields $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn select-present-fields (data fields)
-            foldl fields ({})
+            .fold fields ({})
               fn (acc field)
                 hint-fn $ {}
                   :args $ [] (:: 'Map 'Tag 'Dynamic) 'Tag

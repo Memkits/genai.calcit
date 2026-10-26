@@ -2,7 +2,16 @@
 
 面向 `@google/genai` 的 Calcit JavaScript 绑定，包含 Node 脚本和独立 Web 音频转录示例。
 
-## 本轮 Option 方法写法：使用者影响
+## 本轮公开 List 折叠方法：使用者影响
+
+共享字段筛选函数改用公开 `.fold`，不直接调用内部 `foldl`。字段顺序、缺失/nil
+省略行为及 false/0 保留行为不变；配置、结果 Struct/Option、三个入口和公开接口无需适配。
+本轮不升级 Google SDK、模型、工具链或依赖，不删除真实 JS 信任边界；仍配对正式 0.30.1。
+沿用原离线断言、Node/Web/公共 SDK 与完整 strict 门禁，不添加测试脚手架或预算。
+离线验收不读取 API key、不调用真实 Google 服务、不上传文件；最终 PR CI 以实际运行结果为准，
+不代表已合并、发版或部署生产。
+
+## 此前 Option 方法写法：使用者影响
 
 在既有正式 0.30.1 图上，将 UI 事件默认值、Node 环境变量与 SDK 消息字段查询中的
 五处 `option:unwrap` / `option:unwrap-or` 改为 `.unwrap` / `.unwrap-or`。

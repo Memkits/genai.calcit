@@ -53,8 +53,7 @@ jobs:
         set -euo pipefail
         test ! -e compact.cirru
         test ! -e package.cirru
-        calcit calcit.cirru edit format
-        git diff --exit-code -- calcit.cirru
+        calcit calcit.cirru edit transaction --code '[["edit","format"]]' --dry-run --format json | jq -e '.changed == false'
         # Node checks its executable entry and the entire public SDK. Browser-only
         # definitions are covered by Web --all-defs, not incorrectly run as Node.
         calcit calcit.cirru --check-only
