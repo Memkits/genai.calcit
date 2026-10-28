@@ -2,7 +2,20 @@
 
 面向 `@google/genai` 的 Calcit JavaScript 绑定，包含 Node 脚本和独立 Web 音频转录示例。
 
-## 本轮公开 List 折叠方法：使用者影响
+## Calcit 0.31.0：使用者影响
+
+CLI 与 `@calcit/procs` 配对正式 0.31.0，UI/Respo 使用已发布的
+0.9.0-alpha.4 / 0.17.0-alpha.4，JS-FFI 0.2.7，传递 Router 0.9.0-alpha.3。
+UI 依赖仍是 alpha；请重新安装完整依赖图、生成 JS 并刷新页面。
+Google SDK、模型和 API 版本保持不变。
+
+三处嵌套响应读取适配 `get-in` 的 Result/PathError 合同：缺失路径返回原来的 None，
+错误的中间数据形状抛出错误，不伪装成缺失；公开 Option/Struct 返回类型不变。
+三个入口显式绑定 Respo dispatch 的 Enum 合同，Web 的原空回调仍忽略事件。
+保留 Node/Web/公共 SDK 和完整 strict 门禁，没有新增 Dynamic、强转或放宽预算。
+离线断言和合成响应不能证明真实 Google 服务或音频上传效果。
+
+## 此前公开 List 折叠方法：使用者影响
 
 共享字段筛选函数改用公开 `.fold`，不直接调用内部 `foldl`。字段顺序、缺失/nil
 省略行为及 false/0 保留行为不变；配置、结果 Struct/Option、三个入口和公开接口无需适配。
