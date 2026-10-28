@@ -2,6 +2,21 @@
 
 面向 `@google/genai` 的 Calcit JavaScript 绑定，包含 Node 脚本和独立 Web 音频转录示例。
 
+## Calcit 0.32.0 迁移候选：使用者影响
+
+CLI/procs 配对正式 0.32.0，需要重新安装依赖、生成 Node/Web 产物并刷新。
+Respo 0.17.0、UI 0.9.0 当前使用本地候选，JS-FFI 为 0.2.8；正式标签整图待验收。
+Google SDK、模型、API 版本和公开 Option/Struct 合同保持不变，不发布 tag/npm。
+
+官方工具转换 165 处旧类型写法，111 个定义 schema 保持；保留全部原门禁，
+不新增强转、Dynamic 或测试脚手架。取消过期 procs 单包安装豁免，使用一小时
+发布年龄门禁。仅执行原离线断言，不读取真实 API key、不创建真实客户端、
+不调用模型服务或上传音频；离线验收不证明真实服务可用性。
+
+本轮完整 strict、Node 入口、Web 全量与双目标公共 SDK 检查、原离线配置断言、
+Node/Web 构建及 immutable 安装通过；独立评审无待处理问题。
+正式标签整图和远端 CI 尚待验证，没有运行默认 Node 示例或音频上传。
+
 ## Calcit 0.31.0：使用者影响
 
 CLI 与 `@calcit/procs` 配对正式 0.31.0，UI/Respo 使用已发布的
