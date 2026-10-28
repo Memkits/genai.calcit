@@ -6,15 +6,15 @@
     :default $ {} (:description |) (:init-fn 'genai.main/main!) (:mode :js) (:reload-fn 'genai.main/reload!) (:target :node)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
-      :type-slots $ {}
+      :type-slots $ {} $ :dispatch-op |genai.main/DispatchOp
     :test-config $ {} (:description |) (:init-fn 'genai.test-config/main!) (:mode :js) (:reload-fn 'genai.test-config/main!) (:target :node)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
-      :type-slots $ {}
+      :type-slots $ {} $ :dispatch-op |genai.main/DispatchOp
     :web $ {} (:description |) (:init-fn 'genai.main/web-main!) (:mode :js) (:reload-fn 'genai.main/web-reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
-      :type-slots $ {}
+      :type-slots $ {} $ :dispatch-op |genai.main/DispatchOp
   :files $ {}
     'genai.main $ %{} 'FileEntry
       :defs $ {}
@@ -35,6 +35,10 @@
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ :: 'Trait
+        'DispatchOp $ %{} 'CodeEntry (:doc "|Web render dispatch 的 Enum 合同；当前回调忽略事件，代表值不发送。")
+          :code $ quote $ def DispatchOp (:: :unhandled)
+          :examples $ []
+          :schema $ :: 'Enum
         'FileInputEventHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait FileInputEventHost
             :event-target $ :: 'JsNullish 'genai.main/FileInputTargetHost
@@ -771,8 +775,11 @@
                   :: 'Map 'Tag 'Dynamic
               match
                 get-in data $ [] :candidates 0 :content :parts
-                (:none) (Option :none)
-                (:some value)
+                (:err error)
+                  match error
+                    (:missing) (Option :none)
+                    (:shape message) (raise message)
+                (:ok value)
                   if (nil? value) (Option :none)
                     Option :some $ decode-map-as value $ :: 'List (:: 'Map 'Tag 'Dynamic)
           :examples $ []
@@ -789,8 +796,11 @@
                   :: 'Map 'Tag 'Dynamic
               match
                 get-in data $ [] :generatedImages 0 :image :imageBytes
-                (:none) (Option :none)
-                (:some value)
+                (:err error)
+                  match error
+                    (:missing) (Option :none)
+                    (:shape message) (raise message)
+                (:ok value)
                   if (nil? value) (Option :none)
                     Option :some $ decode-map-as value 'String
           :examples $ []
@@ -831,8 +841,11 @@
                   :: 'Map 'Tag 'Dynamic
                 part $ match
                   get-in data $ [] :candidates 0 :content :parts 0
-                  (:none) (Option :none)
-                  (:some value)
+                  (:err error)
+                    match error
+                      (:missing) (Option :none)
+                      (:shape message) (raise message)
+                  (:ok value)
                     if (nil? value) (Option :none)
                       Option :some $ decode-map-as value $ :: 'Map 'Tag 'Dynamic
                 thinking? $ match part
