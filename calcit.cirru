@@ -557,7 +557,7 @@
                 :httpOptions $ option->js $ :http-options cfg
                 :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/CreateCachedContentConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/CreateCachedContentConfig (-> JsObject) (:features :js-ffi)
         'caches-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-create! (client model cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -658,7 +658,7 @@
                   :abortSignal $ option->js signal
                   :httpOptions $ option->js http-opts
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ContentConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/ContentConfig (-> JsObject) (:features :js-ffi)
         'extract-content-parts $ %{} 'CodeEntry
           :doc "|extracts candidates[0].content.parts from a non-streaming generateContent response"
           :code $ quote $ defn extract-content-parts (result)
@@ -849,7 +849,7 @@
               :stopSequences $ option->js $ :stop-sequences cfg
               :responseMimeType $ option->js $ :response-mime-type cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GenerationConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/GenerationConfig (-> JsObject) (:features :js-ffi)
         'history->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn history->js (history)
             to-js-data $ map history $ fn (turn)
@@ -862,7 +862,8 @@
           :code $ quote $ defn inline-audio (data mime-type)
             {} $ :inline_data $ {} (:data data) (:mime_type mime-type)
           :examples $ []
-          :schema $ quote $ Fn String String (-> Dynamic)
+          :schema $ quote $ Fn String String
+            -> $ Map Tag $ Map Tag String
         'input->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn input->js (v)
             if (string? v)
@@ -911,7 +912,7 @@
               :filter $ option->js $ :filter cfg
               :queryBase $ option->js $ :query-base cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ListParams (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/ListParams (-> JsObject) (:features :js-ffi)
         'make-abort-signal $ %{} 'CodeEntry
           :doc "|creates AbortController, stores in *abort-control atom, returns signal; pass atom for external abort control"
           :code $ quote $ defn make-abort-signal (*abort-control)
@@ -926,7 +927,7 @@
           :code $ quote $ defn make-http-options (base-url)
             js-object $ :baseUrl base-url
           :examples $ []
-          :schema $ quote $ Fn String (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn String (-> JsObject) (:features :js-ffi)
         'make-search-tools $ %{} 'CodeEntry
           :doc "|builds tools array with googleSearch and/or urlContext based on boolean flags; returns nil if neither"
           :code $ quote $ defn make-search-tools (search? has-url?)
@@ -947,7 +948,7 @@
           :code $ quote $ defn make-thinking-config (budget include-thoughts?)
             js-object (:thinkingBudget budget) (:includeThoughts include-thoughts?)
           :examples $ []
-          :schema $ quote $ Fn Number Bool (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn Number Bool (-> JsObject) (:features :js-ffi)
         'maybe-to-js-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn maybe-to-js-data (x)
             if
@@ -1117,7 +1118,7 @@
                 :abortSignal $ option->js signal
                 :httpOptions $ option->js http-opts
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/CreateParams (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/CreateParams (-> JsObject) (:features :js-ffi)
         'read-status $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-status (value)
             match value
@@ -1146,7 +1147,7 @@
               :httpOptions $ option->js $ :http-options cfg
               :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/RequestConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/RequestConfig (-> JsObject) (:features :js-ffi)
         'select-present-fields $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn select-present-fields (data fields)
             .fold fields ({})
@@ -1163,7 +1164,8 @@
           :code $ quote $ defn text-part (text)
             {} $ :text text
           :examples $ []
-          :schema $ quote $ Fn String (-> Dynamic)
+          :schema $ quote $ Fn String
+            -> $ Map Tag String
         'upload-file-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn upload-file-config->js (cfg)
             js-object
@@ -1173,7 +1175,7 @@
               :httpOptions $ option->js $ :http-options cfg
               :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/UploadFileConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/UploadFileConfig (-> JsObject) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns genai.sdk
           :require
