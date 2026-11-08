@@ -6,15 +6,15 @@
     :default $ {} (:description |) (:init-fn 'genai.main/main!) (:mode :js) (:reload-fn 'genai.main/reload!) (:target :node)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |genai.main/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'genai.main/DispatchOp
     :test-config $ {} (:description |) (:init-fn 'genai.test-config/main!) (:mode :js) (:reload-fn 'genai.test-config/main!) (:target :node)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |genai.main/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'genai.main/DispatchOp
     :web $ {} (:description |) (:init-fn 'genai.main/web-main!) (:mode :js) (:reload-fn 'genai.main/web-reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |respo-ui.calcit/ |js-ffi/
-      :type-slots $ {} $ :dispatch-op |genai.main/DispatchOp
+      :type-slots $ {} $ :dispatch-op 'genai.main/DispatchOp
   :files $ {}
     'genai.main $ %{} 'FileEntry
       :defs $ {}
@@ -25,9 +25,9 @@
           :schema $ quote $ Ref genai.main/AppState
         'AppState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct AppState
-            :result $ quote $ Option String
-            :loading? 'Bool
-            :error-msg $ quote $ Option String
+            :result $ Option String
+            :loading? Bool
+            :error-msg $ Option String
           :examples $ []
           :schema $ quote StructDef
         'BrowserFileHost $ %{} 'CodeEntry (:doc |)
@@ -36,26 +36,19 @@
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'DispatchOp $ %{} 'CodeEntry (:doc "|Web render dispatch 的 Enum 合同；当前回调忽略事件，代表值不发送。")
-          :code $ quote $ def DispatchOp (:: :unhandled)
+          :code $ quote $ defenum DispatchOp (:unhandled)
           :examples $ []
-          :schema $ quote Enum
-        'FileInputEventHost $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ deftrait FileInputEventHost
-            :event-target $ quote $ JsNullish genai.main/FileInputTargetHost
-          :examples $ []
-          :ffi $ {} (:backend :js) (:kind :external-object)
-            :names $ {} $ :event-target |target
-          :schema $ quote Trait
+          :schema $ quote EnumDef
         'FileInputTargetHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait FileInputTargetHost
-            :files $ quote $ JsNullish JsObject
+            :files $ JsNullish JsObject
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'FileReaderHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait FileReaderHost (:onload 'Dynamic) (:onerror 'Dynamic)
-            :result $ quote $ JsNullish String
-            .read-as-data-url! $ quote $ Fn genai.main/FileReaderHost Dynamic (-> Unit)
+            :result $ JsNullish String
+            .read-as-data-url! $ Fn genai.main/FileReaderHost Dynamic $ -> Unit
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
             :names $ {} $ :read-as-data-url! |readAsDataURL
@@ -87,18 +80,26 @@
                   div ({}) (<> "|Select an audio file: ")
                     input $ {} (:type |file) (:accept |audio/*)
                       :on-change $ fn (e d!)
+                        hint-fn $ Fn respo.schema/RespoEvent
+                          Fn genai.main/DispatchOp $ -> Unit
+                          -> Unit
+                          :features :js-ffi
                         match
-                          event-first-file $ .unwrap-or (get e :event) nil
+                          event-first-file $ :event e
                           (:none) &unit
                           (:some file) (on-transcribe file)
-              if (.some? error-msg)
-                div
-                  {} $ :style $ {} (:color |red) (:margin-top |10px)
-                  <> $ .unwrap error-msg
-              if (.some? result)
-                div
-                  {} $ :style $ {} (:margin-top |20px) (:padding |15px) (:border "|1px solid #eee") (:border-radius |4px) (:background-color |#f9f9f9) (:white-space |pre-wrap) (:min-height |100px)
-                  <> $ .unwrap result
+              match error-msg
+                (:some text)
+                  Option :some $ div
+                    {} $ :style $ {} (:color |red) (:margin-top |10px)
+                    <> text
+                (:none) (Option :none)
+              match result
+                (:some text)
+                  Option :some $ div
+                    {} $ :style $ {} (:margin-top |20px) (:padding |15px) (:border "|1px solid #eee") (:border-radius |4px) (:background-color |#f9f9f9) (:white-space |pre-wrap) (:min-height |100px)
+                    <> text
+                (:none) (Option :none)
           :examples $ []
           :schema $ quote $ Fn (Option String) Bool (Option String)
             Fn genai.main/BrowserFileHost (-> Unit) (:features :js-ffi)
@@ -107,22 +108,21 @@
         'event-first-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn event-first-file (event)
             let
-                input-event $ unsafe-coerce event 'genai.main/FileInputEventHost
-                target $ input-event :event-target
+                target $ event :target
               if (js-nullish? target) (Option :none)
                 let
-                    input-target $ unsafe-coerce target 'genai.main/FileInputTargetHost
-                    files $ .-files input-target
+                    input-target $ js-cast target 'genai.main/FileInputTargetHost
+                    files $ input-target :files
                   if (js-nullish? files) (Option :none)
                     let
                         list-object $ unsafe-coerce files 'JsObject
                         index 0
                         file $ js-get list-object index
                       if (js-nullish? file) (Option :none)
-                        Option :some $ unsafe-coerce file 'genai.main/BrowserFileHost
+                        Option :some $ js-cast file 'genai.main/BrowserFileHost
           :examples $ []
-          :schema $ quote $ Fn Dynamic
-            -> $ calcit.core/Option genai.main/BrowserFileHost
+          :schema $ quote $ Fn respo.dom/DomEvent
+            -> $ Option genai.main/BrowserFileHost
             :features :js-ffi
         'handle-transcribe! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn handle-transcribe! (client file)
@@ -231,154 +231,153 @@
       :defs $ {}
         'CachesHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait CachesHost
-            .create $ quote $ Fn genai.sdk/CachesHost Dynamic (-> Dynamic)
-            .delete $ quote $ Fn genai.sdk/CachesHost Dynamic (-> Dynamic)
-            .get $ quote $ Fn genai.sdk/CachesHost Dynamic (-> Dynamic)
-            .list $ quote $ Fn genai.sdk/CachesHost Dynamic (-> Dynamic)
+            .create $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
+            .delete $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
+            .get $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
+            .list $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'CandidateHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait CandidateHost
-            :content $ quote $ JsNullish genai.sdk/ContentHost
+            :content $ JsNullish genai.sdk/ContentHost
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'ChatHistoryTurn $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ChatHistoryTurn
-            :role $ quote $ Option String
-            :parts $ quote $ Option
-              List $ Map Tag Dynamic
+            :role $ Option String
+            :parts $ Option $ List (Map Tag Dynamic)
           :examples $ []
           :schema $ quote StructDef
         'ChatHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ChatHost
-            .getHistory $ quote $ Fn genai.sdk/ChatHost (-> Dynamic)
-            .sendMessage $ quote $ Fn genai.sdk/ChatHost Dynamic (-> Dynamic)
-            .sendMessageStream $ quote $ Fn genai.sdk/ChatHost Dynamic (-> Dynamic)
+            .getHistory $ Fn genai.sdk/ChatHost $ -> Dynamic
+            .sendMessage $ Fn genai.sdk/ChatHost Dynamic $ -> Dynamic
+            .sendMessageStream $ Fn genai.sdk/ChatHost Dynamic $ -> Dynamic
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'ChatsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ChatsHost
-            .create $ quote $ Fn genai.sdk/ChatsHost Dynamic (-> genai.sdk/ChatHost)
+            .create $ Fn genai.sdk/ChatsHost Dynamic $ -> genai.sdk/ChatHost
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'ClientOptions $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientOptions
-            :api-key $ quote $ Option String
-            :vertexai $ quote $ Option Bool
-            :project $ quote $ Option String
-            :location $ quote $ Option String
-            :api-version $ quote $ Option String
-            :http-options $ quote $ Option Dynamic
+            :api-key $ Option String
+            :vertexai $ Option Bool
+            :project $ Option String
+            :location $ Option String
+            :api-version $ Option String
+            :http-options $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'ContentConfig $ %{} 'CodeEntry
           :doc "|config struct for generateContent/generateContentStream, fields: model contents system-instruction thinking-config tools response-modalities response-mime-type abort-signal http-options"
-          :code $ quote $ defstruct ContentConfig (:model 'String) (:contents 'Dynamic)
-            :system-instruction $ quote $ Option Dynamic
-            :thinking-config $ quote $ Option Dynamic
-            :tools $ quote $ Option (List Dynamic)
-            :tool-config $ quote $ Option Dynamic
-            :response-modalities $ quote $ Option (List Dynamic)
-            :response-mime-type $ quote $ Option String
-            :cached-content $ quote $ Option String
-            :abort-signal $ quote $ Option Dynamic
-            :http-options $ quote $ Option Dynamic
+          :code $ quote $ defstruct ContentConfig (:model String) (:contents Dynamic)
+            :system-instruction $ Option Dynamic
+            :thinking-config $ Option Dynamic
+            :tools $ Option $ List Dynamic
+            :tool-config $ Option Dynamic
+            :response-modalities $ Option $ List Dynamic
+            :response-mime-type $ Option String
+            :cached-content $ Option String
+            :abort-signal $ Option Dynamic
+            :http-options $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'ContentHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ContentHost
-            :parts $ quote $ JsNullish JsArray
+            :parts $ JsNullish JsArray
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'ContentOutput $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum ContentOutput (:text 'genai.sdk/TextContent) (:image 'genai.sdk/ImageContent) (:thought 'genai.sdk/ThoughtContent) (:function-call 'genai.sdk/FunctionCallContent) (:function-result 'genai.sdk/FunctionResultContent)
+          :code $ quote $ defenum ContentOutput (:text genai.sdk/TextContent) (:image genai.sdk/ImageContent) (:thought genai.sdk/ThoughtContent) (:function-call genai.sdk/FunctionCallContent) (:function-result genai.sdk/FunctionResultContent)
           :examples $ []
           :schema $ quote EnumDef
         'CountTokensResponse $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct CountTokensResponse
-            :totalTokens $ quote $ Option Number
-            :sdkHttpResponse $ quote $ Option Dynamic
+            :totalTokens $ Option Number
+            :sdkHttpResponse $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'CreateCachedContentConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct CreateCachedContentConfig
-            :ttl $ quote $ Option String
-            :expire-time $ quote $ Option String
-            :display-name $ quote $ Option String
-            :contents $ quote $ Option Dynamic
-            :system-instruction $ quote $ Option Dynamic
-            :tools $ quote $ Option (List Dynamic)
-            :tool-config $ quote $ Option Dynamic
-            :kms-key-name $ quote $ Option String
-            :http-options $ quote $ Option Dynamic
-            :abort-signal $ quote $ Option Dynamic
+            :ttl $ Option String
+            :expire-time $ Option String
+            :display-name $ Option String
+            :contents $ Option Dynamic
+            :system-instruction $ Option Dynamic
+            :tools $ Option $ List Dynamic
+            :tool-config $ Option Dynamic
+            :kms-key-name $ Option String
+            :http-options $ Option Dynamic
+            :abort-signal $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'CreateParams $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct CreateParams (:model 'String) (:input 'Dynamic)
-            :system-instruction $ quote $ Option Dynamic
-            :previous-interaction-id $ quote $ Option String
-            :agent $ quote $ Option String
-            :background $ quote $ Option Bool
-            :store $ quote $ Option Bool
-            :generation-config $ quote $ Option genai.sdk/GenerationConfig
-            :tools $ quote $ Option (List Dynamic)
-            :response-modalities $ quote $ Option (List Dynamic)
-            :response-format $ quote $ Option Dynamic
-            :response-mime-type $ quote $ Option String
-            :abort-signal $ quote $ Option Dynamic
-            :http-options $ quote $ Option Dynamic
+          :code $ quote $ defstruct CreateParams (:model String) (:input Dynamic)
+            :system-instruction $ Option Dynamic
+            :previous-interaction-id $ Option String
+            :agent $ Option String
+            :background $ Option Bool
+            :store $ Option Bool
+            :generation-config $ Option genai.sdk/GenerationConfig
+            :tools $ Option $ List Dynamic
+            :response-modalities $ Option $ List Dynamic
+            :response-format $ Option Dynamic
+            :response-mime-type $ Option String
+            :abort-signal $ Option Dynamic
+            :http-options $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'ExtractedInteractionOutput $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ExtractedInteractionOutput
-            :text $ quote $ Option String
-            :function-calls $ quote $ List genai.sdk/FunctionCallContent
-            :interaction-id 'String
-            :status 'genai.sdk/InteractionStatus
+            :text $ Option String
+            :function-calls $ List genai.sdk/FunctionCallContent
+            :interaction-id String
+            :status genai.sdk/InteractionStatus
           :examples $ []
           :schema $ quote StructDef
         'FilesHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait FilesHost
-            .delete $ quote $ Fn genai.sdk/FilesHost Dynamic (-> Dynamic)
-            .get $ quote $ Fn genai.sdk/FilesHost Dynamic (-> Dynamic)
-            .list $ quote $ Fn genai.sdk/FilesHost Dynamic (-> Dynamic)
-            .upload $ quote $ Fn genai.sdk/FilesHost Dynamic (-> Dynamic)
+            .delete $ Fn genai.sdk/FilesHost Dynamic $ -> Dynamic
+            .get $ Fn genai.sdk/FilesHost Dynamic $ -> Dynamic
+            .list $ Fn genai.sdk/FilesHost Dynamic $ -> Dynamic
+            .upload $ Fn genai.sdk/FilesHost Dynamic $ -> Dynamic
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'FunctionCallContent $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct FunctionCallContent (:id 'String) (:name 'String)
-            :arguments $ quote $ Map Tag Dynamic
+          :code $ quote $ defstruct FunctionCallContent (:id String) (:name String)
+            :arguments $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
         'FunctionResultContent $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct FunctionResultContent (:call-id 'String) (:result 'Dynamic)
-            :is-error $ quote $ Option Bool
-            :name $ quote $ Option String
+          :code $ quote $ defstruct FunctionResultContent (:call-id String) (:result Dynamic)
+            :is-error $ Option Bool
+            :name $ Option String
           :examples $ []
           :schema $ quote StructDef
         'GenerateResponseHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait GenerateResponseHost
-            :candidates $ quote $ JsNullish JsArray
-            :text $ quote $ JsNullish String
+            :candidates $ JsNullish JsArray
+            :text $ JsNullish String
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'GenerationConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct GenerationConfig
-            :temperature $ quote $ Option Number
-            :max-output-tokens $ quote $ Option Number
-            :top-p $ quote $ Option Number
-            :top-k $ quote $ Option Number
-            :candidate-count $ quote $ Option Number
-            :stop-sequences $ quote $ Option (List Dynamic)
-            :response-mime-type $ quote $ Option String
+            :temperature $ Option Number
+            :max-output-tokens $ Option Number
+            :top-p $ Option Number
+            :top-k $ Option Number
+            :candidate-count $ Option Number
+            :stop-sequences $ Option $ List Dynamic
+            :response-mime-type $ Option String
           :examples $ []
           :schema $ quote StructDef
         'GoogleClientHost $ %{} 'CodeEntry (:doc |)
@@ -388,32 +387,32 @@
           :schema $ quote Trait
         'ImageContent $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ImageContent
-            :data $ quote $ Option String
-            :mime-type $ quote $ Option String
-            :uri $ quote $ Option String
+            :data $ Option String
+            :mime-type $ Option String
+            :uri $ Option String
           :examples $ []
           :schema $ quote StructDef
         'ImageGenConfig $ %{} 'CodeEntry
           :doc "|config struct for generateImages, fields: model prompt number-of-images include-rai-reason abort-signal http-options"
-          :code $ quote $ defstruct ImageGenConfig (:model 'String) (:prompt 'String)
-            :number-of-images $ quote $ Option Number
-            :include-rai-reason $ quote $ Option Bool
-            :abort-signal $ quote $ Option Dynamic
-            :http-options $ quote $ Option Dynamic
+          :code $ quote $ defstruct ImageGenConfig (:model String) (:prompt String)
+            :number-of-images $ Option Number
+            :include-rai-reason $ Option Bool
+            :abort-signal $ Option Dynamic
+            :http-options $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'Interaction $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct Interaction (:id 'String) (:status 'genai.sdk/InteractionStatus)
-            :outputs $ quote $ Option (List Dynamic)
-            :model $ quote $ Option String
-            :created $ quote $ Option String
-            :updated $ quote $ Option String
-            :usage $ quote $ Option genai.sdk/Usage
+          :code $ quote $ defstruct Interaction (:id String) (:status genai.sdk/InteractionStatus)
+            :outputs $ Option $ List Dynamic
+            :model $ Option String
+            :created $ Option String
+            :updated $ Option String
+            :usage $ Option genai.sdk/Usage
           :examples $ []
           :schema $ quote StructDef
         'InteractionOutputHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait InteractionOutputHost (:type 'String)
-            :text $ quote $ JsNullish String
+            :text $ JsNullish String
             :name 'String
             :arguments 'JsObject
             :id 'String
@@ -422,22 +421,21 @@
           :schema $ quote Trait
         'InteractionResponseHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait InteractionResponseHost
-            :outputs $ quote $ JsNullish JsArray
+            :outputs $ JsNullish JsArray
             :id 'String
             :status 'String
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'InteractionResult $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct InteractionResult (:id 'String) (:status 'genai.sdk/InteractionStatus)
-            :outputs $ quote $ Option
-              List $ Map Tag Dynamic
-            :model $ quote $ Option String
-            :created $ quote $ Option String
-            :updated $ quote $ Option String
-            :role $ quote $ Option String
-            :object $ quote $ Option String
-            :usage $ quote $ Option genai.sdk/SdkUsage
+          :code $ quote $ defstruct InteractionResult (:id String) (:status genai.sdk/InteractionStatus)
+            :outputs $ Option $ List (Map Tag Dynamic)
+            :model $ Option String
+            :created $ Option String
+            :updated $ Option String
+            :role $ Option String
+            :object $ Option String
+            :usage $ Option genai.sdk/SdkUsage
           :examples $ []
           :schema $ quote StructDef
         'InteractionStatus $ %{} 'CodeEntry (:doc |)
@@ -446,101 +444,98 @@
           :schema $ quote EnumDef
         'InteractionsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait InteractionsHost
-            .cancel $ quote $ Fn genai.sdk/InteractionsHost Dynamic (-> Dynamic)
-            .create $ quote $ Fn genai.sdk/InteractionsHost Dynamic (-> genai.sdk/InteractionResponseHost)
-            .delete $ quote $ Fn genai.sdk/InteractionsHost Dynamic (-> Dynamic)
-            .get $ quote $ Fn genai.sdk/InteractionsHost Dynamic (-> Dynamic)
+            .cancel $ Fn genai.sdk/InteractionsHost Dynamic $ -> Dynamic
+            .create $ Fn genai.sdk/InteractionsHost Dynamic $ -> genai.sdk/InteractionResponseHost
+            .delete $ Fn genai.sdk/InteractionsHost Dynamic $ -> Dynamic
+            .get $ Fn genai.sdk/InteractionsHost Dynamic $ -> Dynamic
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'ListParams $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ListParams
-            :page-size $ quote $ Option Number
-            :page-token $ quote $ Option String
-            :filter $ quote $ Option String
-            :query-base $ quote $ Option Bool
-            :http-options $ quote $ Option Dynamic
-            :abort-signal $ quote $ Option Dynamic
+            :page-size $ Option Number
+            :page-token $ Option String
+            :filter $ Option String
+            :query-base $ Option Bool
+            :http-options $ Option Dynamic
+            :abort-signal $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'ModelsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ModelsHost
-            .generateContent $ quote $ Fn genai.sdk/ModelsHost Dynamic (-> genai.sdk/GenerateResponseHost)
-            .generateContentStream $ quote $ Fn genai.sdk/ModelsHost Dynamic (-> Dynamic)
-            .generateImages $ quote $ Fn genai.sdk/ModelsHost Dynamic (-> Dynamic)
-            .computeTokens $ quote $ Fn genai.sdk/ModelsHost Dynamic (-> Dynamic)
-            .countTokens $ quote $ Fn genai.sdk/ModelsHost Dynamic (-> Dynamic)
-            .get $ quote $ Fn genai.sdk/ModelsHost Dynamic (-> Dynamic)
-            .list $ quote $ Fn genai.sdk/ModelsHost Dynamic (-> Dynamic)
+            .generateContent $ Fn genai.sdk/ModelsHost Dynamic $ -> genai.sdk/GenerateResponseHost
+            .generateContentStream $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
+            .generateImages $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
+            .computeTokens $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
+            .countTokens $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
+            .get $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
+            .list $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'PartHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait PartHost
-            :text $ quote $ JsNullish String
+            :text $ JsNullish String
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'RequestConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct RequestConfig
-            :http-options $ quote $ Option Dynamic
-            :abort-signal $ quote $ Option Dynamic
+            :http-options $ Option Dynamic
+            :abort-signal $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'SdkUsage $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct SdkUsage
-            :total_tokens $ quote $ Option Number
-            :total_input_tokens $ quote $ Option Number
-            :input_tokens_by_modality $ quote $ Option (List Dynamic)
-            :total_cached_tokens $ quote $ Option Number
-            :total_output_tokens $ quote $ Option Number
-            :total_tool_use_tokens $ quote $ Option Number
-            :total_thought_tokens $ quote $ Option Number
-            :cached_tokens_by_modality $ quote $ Option
-              List $ Map Tag Dynamic
-            :output_tokens_by_modality $ quote $ Option
-              List $ Map Tag Dynamic
-            :tool_use_tokens_by_modality $ quote $ Option
-              List $ Map Tag Dynamic
+            :total_tokens $ Option Number
+            :total_input_tokens $ Option Number
+            :input_tokens_by_modality $ Option $ List Dynamic
+            :total_cached_tokens $ Option Number
+            :total_output_tokens $ Option Number
+            :total_tool_use_tokens $ Option Number
+            :total_thought_tokens $ Option Number
+            :cached_tokens_by_modality $ Option $ List (Map Tag Dynamic)
+            :output_tokens_by_modality $ Option $ List (Map Tag Dynamic)
+            :tool_use_tokens_by_modality $ Option $ List (Map Tag Dynamic)
           :examples $ []
           :schema $ quote StructDef
         'StreamChunkOutput $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct StreamChunkOutput
-            :text $ quote $ Option String
-            :thinking? 'Bool
+            :text $ Option String
+            :thinking? Bool
           :examples $ []
           :schema $ quote StructDef
         'TextContent $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct TextContent
-            :text $ quote $ Option String
+            :text $ Option String
           :examples $ []
           :schema $ quote StructDef
         'ThoughtContent $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ThoughtContent
-            :signature $ quote $ Option String
-            :summary $ quote $ Option (List Dynamic)
+            :signature $ Option String
+            :summary $ Option $ List Dynamic
           :examples $ []
           :schema $ quote StructDef
         'Turn $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Turn
-            :role $ quote $ Option String
-            :content 'Dynamic
+            :role $ Option String
+            :content Dynamic
           :examples $ []
           :schema $ quote StructDef
         'UploadFileConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct UploadFileConfig
-            :name $ quote $ Option String
-            :mime-type $ quote $ Option String
-            :display-name $ quote $ Option String
-            :http-options $ quote $ Option Dynamic
-            :abort-signal $ quote $ Option Dynamic
+            :name $ Option String
+            :mime-type $ Option String
+            :display-name $ Option String
+            :http-options $ Option Dynamic
+            :abort-signal $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
         'Usage $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Usage
-            :input-tokens $ quote $ Option Number
-            :output-tokens $ quote $ Option Number
-            :total-tokens $ quote $ Option Number
+            :input-tokens $ Option Number
+            :output-tokens $ Option Number
+            :total-tokens $ Option Number
           :examples $ []
           :schema $ quote StructDef
         'cached-content-config->js $ %{} 'CodeEntry (:doc |)
@@ -600,10 +595,10 @@
               map
                 decode-map-as
                   tagging-edn $ to-calcit-data (.getHistory chat) true
-                  :: 'List $ :: 'Map 'Tag 'Dynamic
+                  List $ Map Tag Dynamic
                 fn (row)
                   select-present-fields row $ [] :role :parts
-              :: 'List 'genai.sdk/ChatHistoryTurn
+              List genai.sdk/ChatHistoryTurn
           :examples $ []
           :schema $ quote $ Fn genai.sdk/ChatHost
             -> $ List genai.sdk/ChatHistoryTurn
@@ -670,7 +665,7 @@
             let
                 data $ decode-map-as
                   tagging-edn $ to-calcit-data result true
-                  :: 'Map 'Tag 'Dynamic
+                  Map Tag Dynamic
               match
                 get-in data $ [] :candidates 0 :content :parts
                 (:err error)
@@ -679,7 +674,7 @@
                     (:shape message) (raise message)
                 (:ok value)
                   if (nil? value) (Option :none)
-                    Option :some $ decode-map-as value $ :: 'List (:: 'Map 'Tag 'Dynamic)
+                    Option :some $ decode-map-as value $ List (Map Tag Dynamic)
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Option $ List (Map Tag Dynamic)
@@ -690,7 +685,7 @@
             let
                 data $ decode-map-as
                   tagging-edn $ to-calcit-data result true
-                  :: 'Map 'Tag 'Dynamic
+                  Map Tag Dynamic
               match
                 get-in data $ [] :generatedImages 0 :image :imageBytes
                 (:err error)
@@ -733,7 +728,7 @@
             let
                 data $ decode-map-as
                   tagging-edn $ to-calcit-data chunk true
-                  :: 'Map 'Tag 'Dynamic
+                  Map Tag Dynamic
                 part $ match
                   get-in data $ [] :candidates 0 :content :parts 0
                   (:err error)
@@ -742,7 +737,7 @@
                       (:shape message) (raise message)
                   (:ok value)
                     if (nil? value) (Option :none)
-                      Option :some $ decode-map-as value $ :: 'Map 'Tag 'Dynamic
+                      Option :some $ decode-map-as value $ Map Tag Dynamic
                 thinking? $ match part
                   (:none) false
                   (:some row)
@@ -762,7 +757,7 @@
                       (:some feedback)
                         if (nil? feedback) (Option :none)
                           read-string-field
-                            decode-map-as feedback $ :: 'Map 'Tag 'Dynamic
+                            decode-map-as feedback $ Map Tag Dynamic
                             , :blockReason
               StreamChunkOutput :text fallback :thinking? thinking?
           :examples $ []
@@ -1047,7 +1042,7 @@
               select-present-fields
                 decode-map-as
                   tagging-edn $ to-calcit-data value true
-                  :: 'Map 'Tag 'Dynamic
+                  Map Tag Dynamic
                 [] :totalTokens :sdkHttpResponse
               , 'genai.sdk/CountTokensResponse
           :examples $ []
@@ -1057,7 +1052,7 @@
             let
                 data $ decode-map-as
                   tagging-edn $ to-calcit-data value true
-                  :: 'Map 'Tag 'Dynamic
+                  Map Tag Dynamic
                 fields $ select-present-fields data $ [] :id :status :outputs :model :created :updated :role :object :usage
                 status $ read-status $ decode-map-as
                   .unwrap $ get data :status
@@ -1066,7 +1061,7 @@
                   (:none) fields
                   (:some usage)
                     assoc fields :usage $ select-present-fields
-                      decode-map-as usage $ :: 'Map 'Tag 'Dynamic
+                      decode-map-as usage $ Map Tag Dynamic
                       [] :total_tokens :total_input_tokens :input_tokens_by_modality :total_cached_tokens :total_output_tokens :total_tool_use_tokens :total_thought_tokens :cached_tokens_by_modality :output_tokens_by_modality :tool_use_tokens_by_modality
               decode-map-as (assoc normalized :status status) 'genai.sdk/InteractionResult
           :examples $ []
