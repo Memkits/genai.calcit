@@ -463,13 +463,13 @@
           :schema $ quote StructDef
         'ModelsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ModelsHost
-            .generateContent $ Fn genai.sdk/ModelsHost Dynamic $ -> genai.sdk/GenerateResponseHost
-            .generateContentStream $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
-            .generateImages $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
-            .computeTokens $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
-            .countTokens $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
-            .get $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
-            .list $ Fn genai.sdk/ModelsHost Dynamic $ -> Dynamic
+            .generateContent $ Fn genai.sdk/ModelsHost JsObject $ -> genai.sdk/GenerateResponseHost
+            .generateContentStream $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .generateImages $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .computeTokens $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .countTokens $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .get $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .list $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
@@ -696,7 +696,7 @@
                   if (nil? value) (Option :none)
                     Option :some $ decode-map-as value 'String
           :examples $ []
-          :schema $ quote $ Fn Dynamic
+          :schema $ quote $ Fn JsObject
             -> $ Option String
             :features :js-ffi
         'extract-outputs $ %{} 'CodeEntry (:doc |)
@@ -822,7 +822,7 @@
         'generate-images! $ %{} 'CodeEntry
           :doc "|async, calls models.generateImages with ImageGenConfig, returns image generation response"
           :code $ quote $ defn generate-images! (client cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/ImageGenConfig (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/ImageGenConfig (-> JsObject) (:features :js-ffi) (:async)
             let
                 model $ :model cfg
                 prompt $ :prompt cfg
@@ -830,14 +830,14 @@
                 http-opts $ :http-options cfg
                 num-images $ .unwrap-or (:number-of-images cfg) 1
                 include-rai $ :include-rai-reason cfg
-              .generateImages (.-models client)
+              js-ffi.contract/expect-object |models.generateImages $ js-await $ .generateImages (.-models client)
                 js-object (:model model) (:prompt prompt)
                   :config $ js-object (:numberOfImages num-images)
                     :includeRaiReason $ option->js include-rai
                     :httpOptions $ option->js http-opts
                     :abortSignal $ option->js signal
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost genai.sdk/ImageGenConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn genai.sdk/GoogleClientHost genai.sdk/ImageGenConfig (-> JsObject) (:features :js-ffi)
         'generation-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn generation-config->js (cfg)
             js-object
@@ -1231,6 +1231,12 @@
                 (:ok payload) payload
                 (:err message) (raise message)
             println |Offline-request-config-tests-passed
+            assert= (Option :some |offline-fixture)
+              genai.sdk/extract-image-bytes $ js-object $ :generatedImages
+                js-array $ js-object $ :image
+                  js-object $ :imageBytes |offline-fixture
+            assert= (Option :none)
+              genai.sdk/extract-image-bytes $ js-object
             , &unit
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
