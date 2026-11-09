@@ -34,6 +34,7 @@ Node/Web 产物并刷新。使用已发布 Respo **0.19.5**、UI **0.15.2**、JS
 - `models-count-tokens!` 返回 `CountTokensResponse` Struct，`:totalTokens` 是 `Option<Number>`，SDK 未提供计数时是 None。
 - `chat-get-history` 返回 `List<ChatHistoryTurn>`；`chats-create` 的 history 参数使用 `Option<List<ChatHistoryTurn>>`，由专门序列化器发送。
 - `extract-text`、`extract-image-bytes`、`ExtractedInteractionOutput.text` 和 `StreamChunkOutput.text` 返回 `Option<String>`。
+- `generate-images!` 返回校验过的 SDK 响应对象，可直接传给 `extract-image-bytes`。提取器在响应没有图片时返回 `Option :none`。
 - `make-search-tools` 返回 `Option<List<Map<Tag, Dynamic>>>`，可直接作为 ContentConfig.tools；不是 JS 数组或 nil。
 
 发布仍需核对精确提交的 CI 与实际消费者；本 PR 不发布或部署。历史合同迁移见 [#8](https://github.com/Memkits/genai.calcit/issues/8)。
