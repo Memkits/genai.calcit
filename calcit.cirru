@@ -444,10 +444,10 @@
           :schema $ quote EnumDef
         'InteractionsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait InteractionsHost
-            .cancel $ Fn genai.sdk/InteractionsHost Dynamic $ -> Dynamic
-            .create $ Fn genai.sdk/InteractionsHost Dynamic $ -> genai.sdk/InteractionResponseHost
-            .delete $ Fn genai.sdk/InteractionsHost Dynamic $ -> Dynamic
-            .get $ Fn genai.sdk/InteractionsHost Dynamic $ -> Dynamic
+            .cancel $ Fn genai.sdk/InteractionsHost String $ -> Dynamic
+            .create $ Fn genai.sdk/InteractionsHost JsObject $ -> genai.sdk/InteractionResponseHost
+            .delete $ Fn genai.sdk/InteractionsHost String $ -> Dynamic
+            .get $ Fn genai.sdk/InteractionsHost String $ -> genai.sdk/InteractionResponseHost
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
