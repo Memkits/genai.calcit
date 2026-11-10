@@ -19,10 +19,9 @@
     'genai.main $ %{} 'FileEntry
       :defs $ {}
         '*store $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defref *store
-            AppState :result (Option :none) :loading? false :error-msg $ Option :none
+          :code $ quote $ defref *store (AppState :result None :loading? false :error-msg None)
           :examples $ []
-          :schema $ quote $ Ref genai.main/AppState
+          :schema $ quote $ Ref AppState
         'AppState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct AppState
             :result $ Option String
@@ -58,13 +57,12 @@
           :code $ quote $ defn browser-api-key ()
             let
                 key |GEMINI_API_KEY
-                window-host $ unsafe-coerce js/window 'JsObject
+                window-host $ unsafe-coerce js/window JsObject
                 raw $ js-get window-host key
-              if (js-nullish? raw) (Option :none)
-                Option :some $ js-ffi.contract/expect-string |GEMINI_API_KEY raw
+              if (js-nullish? raw) None $ Some $ js-ffi.contract/expect-string |GEMINI_API_KEY raw
           :examples $ []
           :schema $ quote $ Fn
-            -> $ calcit.core/Option String
+            -> $ Option String
             :features :js-ffi
         'comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-container (result loading? error-msg on-transcribe)
@@ -90,44 +88,41 @@
                           (:some file) (on-transcribe file)
               match error-msg
                 (:some text)
-                  Option :some $ div
+                  Some $ div
                     {} $ :style $ {} (:color |red) (:margin-top |10px)
                     <> text
-                (:none) (Option :none)
+                (:none) None
               match result
                 (:some text)
-                  Option :some $ div
+                  Some $ div
                     {} $ :style $ {} (:margin-top |20px) (:padding |15px) (:border "|1px solid #eee") (:border-radius |4px) (:background-color |#f9f9f9) (:white-space |pre-wrap) (:min-height |100px)
                     <> text
-                (:none) (Option :none)
+                (:none) None
           :examples $ []
           :schema $ quote $ Fn (Option String) Bool (Option String)
-            Fn genai.main/BrowserFileHost (-> Unit) (:features :js-ffi)
+            Fn BrowserFileHost (-> Unit) (:features :js-ffi)
             -> respo.schema/Component
             :features :js-ffi
         'event-first-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn event-first-file (event)
             let
                 target $ event :target
-              if (js-nullish? target) (Option :none)
-                let
-                    input-target $ js-cast target 'genai.main/FileInputTargetHost
-                    files $ input-target :files
-                  if (js-nullish? files) (Option :none)
-                    let
-                        list-object $ unsafe-coerce files 'JsObject
-                        index 0
-                        file $ js-get list-object index
-                      if (js-nullish? file) (Option :none)
-                        Option :some $ js-cast file 'genai.main/BrowserFileHost
+              if (js-nullish? target) None $ let
+                  input-target $ js-cast target 'genai.main/FileInputTargetHost
+                  files $ input-target :files
+                if (js-nullish? files) None $ let
+                    list-object $ unsafe-coerce files JsObject
+                    index 0
+                    file $ js-get list-object index
+                  if (js-nullish? file) None $ Some $ js-cast file 'genai.main/BrowserFileHost
           :examples $ []
           :schema $ quote $ Fn respo.dom/DomEvent
-            -> $ Option genai.main/BrowserFileHost
+            -> $ Option BrowserFileHost
             :features :js-ffi
         'handle-transcribe! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn handle-transcribe! (client file)
             hint-fn $ Fn genai.sdk/GoogleClientHost genai.main/BrowserFileHost (-> Unit) (:features :js-ffi) (:async)
-            reset! *store $ assoc (assoc @*store :loading? true) :error-msg $ Option :none
+            reset! *store $ assoc (assoc @*store :loading? true) :error-msg None
             try
               let
                   base64 $ js-await $ read-as-base64 file
@@ -141,11 +136,11 @@
                   , :loading? false
                 , &unit
               fn (err) (js/console.error err)
-                reset! *store $ assoc (assoc @*store :loading? false) :error-msg $ Option :some (str err)
+                reset! *store $ assoc (assoc @*store :loading? false) :error-msg $ Some (str err)
                 , &unit
             , &unit
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost genai.main/BrowserFileHost (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn sdk/GoogleClientHost BrowserFileHost (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! () (hint-fn Async)
             let
@@ -182,7 +177,7 @@
                   js-set reader :onerror $ fn (e) (reject e)
                   .read-as-data-url! reader file
           :examples $ []
-          :schema $ quote $ Fn genai.main/BrowserFileHost (-> String) (:features :js-ffi) (:async)
+          :schema $ quote $ Fn BrowserFileHost (-> String) (:features :js-ffi) (:async)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println |reloaded)
           :examples $ []
@@ -196,12 +191,12 @@
                   hint-fn $ Fn genai.main/BrowserFileHost (-> Unit) (:features :js-ffi)
                   let
                       api-key $ match (get-env |GEMINI_API_KEY)
-                        (:some key) (Option :some key)
+                        (:some key) (Some key)
                         (:none) (browser-api-key)
                     match api-key
                       (:none)
                         do
-                          swap! *store assoc :error-msg $ Option :some "|Missing GEMINI_API_KEY"
+                          swap! *store assoc :error-msg $ Some "|Missing GEMINI_API_KEY"
                           , &unit
                       (:some key)
                         do
@@ -281,7 +276,7 @@
             :thinking-config $ Option Dynamic
             :tools $ Option $ List Dynamic
             :tool-config $ Option Dynamic
-            :response-modalities $ Option $ List Dynamic
+            :response-modalities $ Option $ List String
             :response-mime-type $ Option String
             :cached-content $ Option String
             :abort-signal $ Option Dynamic
@@ -327,7 +322,7 @@
             :store $ Option Bool
             :generation-config $ Option genai.sdk/GenerationConfig
             :tools $ Option $ List Dynamic
-            :response-modalities $ Option $ List Dynamic
+            :response-modalities $ Option $ List String
             :response-format $ Option Dynamic
             :response-mime-type $ Option String
             :abort-signal $ Option Dynamic
@@ -376,7 +371,7 @@
             :top-p $ Option Number
             :top-k $ Option Number
             :candidate-count $ Option Number
-            :stop-sequences $ Option $ List Dynamic
+            :stop-sequences $ Option $ List String
             :response-mime-type $ Option String
           :examples $ []
           :schema $ quote StructDef
@@ -557,7 +552,7 @@
                 :httpOptions $ option->js $ :http-options cfg
                 :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/CreateCachedContentConfig (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn CreateCachedContentConfig (-> JsObject) (:features :js-ffi)
         'caches-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-create! (client model cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -565,7 +560,7 @@
               js-object (:model model)
                 :config $ option-map->js cfg cached-content-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi)
         'caches-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-delete! (client name cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -573,7 +568,7 @@
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'caches-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-get! (client name cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -581,14 +576,14 @@
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'caches-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-list! (client cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi) (:async)
             .list (.-caches client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi)
         'chat-get-history $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-get-history (chat)
             decode-map-as
@@ -600,8 +595,8 @@
                   select-present-fields row $ [] :role :parts
               List genai.sdk/ChatHistoryTurn
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ChatHost
-            -> $ List genai.sdk/ChatHistoryTurn
+          :schema $ quote $ Fn ChatHost
+            -> $ List ChatHistoryTurn
             :features :js-ffi
         'chat-send-message! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-send-message! (chat message config)
@@ -610,7 +605,7 @@
               :message $ maybe-to-js-data message
               :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ChatHost Dynamic (Option genai.sdk/GenerationConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
         'chat-send-message-stream! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-send-message-stream! (chat message config)
             hint-fn $ Fn genai.sdk/ChatHost Dynamic (Option genai.sdk/GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -618,7 +613,7 @@
               :message $ maybe-to-js-data message
               :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ChatHost Dynamic (Option genai.sdk/GenerationConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
         'chats-create $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chats-create (client model config history)
             .create (.-chats client)
@@ -626,9 +621,9 @@
                 :config $ option-map->js config generation-config->js
                 :history $ option-map->js history history->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/GenerationConfig)
-            Option $ List genai.sdk/ChatHistoryTurn
-            -> genai.sdk/ChatHost
+          :schema $ quote $ Fn GoogleClientHost String (Option GenerationConfig)
+            Option $ List ChatHistoryTurn
+            -> ChatHost
             :features :js-ffi
         'content-config->js $ %{} 'CodeEntry
           :doc "|converts ContentConfig struct to JS object for SDK calls, maps fields to camelCase JS properties"
@@ -658,7 +653,7 @@
                   :abortSignal $ option->js signal
                   :httpOptions $ option->js http-opts
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ContentConfig (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn ContentConfig (-> JsObject) (:features :js-ffi)
         'extract-content-parts $ %{} 'CodeEntry
           :doc "|extracts candidates[0].content.parts from a non-streaming generateContent response"
           :code $ quote $ defn extract-content-parts (result)
@@ -670,11 +665,11 @@
                 get-in data $ [] :candidates 0 :content :parts
                 (:err error)
                   match error
-                    (:missing) (Option :none)
+                    (:missing) None
                     (:shape message) (raise message)
                 (:ok value)
-                  if (nil? value) (Option :none)
-                    Option :some $ decode-map-as value $ List (Map Tag Dynamic)
+                  if (nil? value) None $ Some $ decode-map-as value
+                    List $ Map Tag Dynamic
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Option $ List (Map Tag Dynamic)
@@ -690,11 +685,10 @@
                 get-in data $ [] :generatedImages 0 :image :imageBytes
                 (:err error)
                   match error
-                    (:missing) (Option :none)
+                    (:missing) None
                     (:shape message) (raise message)
                 (:ok value)
-                  if (nil? value) (Option :none)
-                    Option :some $ decode-map-as value 'String
+                  if (nil? value) None $ Some $ decode-map-as value 'String
           :examples $ []
           :schema $ quote $ Fn JsObject
             -> $ Option String
@@ -721,7 +715,7 @@
                   , :text
               ExtractedInteractionOutput :text text :function-calls calls :interaction-id (:id interaction) :status $ :status interaction
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/InteractionResult (-> genai.sdk/ExtractedInteractionOutput)
+          :schema $ quote $ Fn InteractionResult (-> ExtractedInteractionOutput)
         'extract-stream-chunk $ %{} 'CodeEntry
           :doc "|extracts text and thinking? from a stream chunk, returns {:text :thinking?} map; handles optional chaining"
           :code $ quote $ defn extract-stream-chunk (chunk)
@@ -733,11 +727,10 @@
                   get-in data $ [] :candidates 0 :content :parts 0
                   (:err error)
                     match error
-                      (:missing) (Option :none)
+                      (:missing) None
                       (:shape message) (raise message)
                   (:ok value)
-                    if (nil? value) (Option :none)
-                      Option :some $ decode-map-as value $ Map Tag Dynamic
+                    if (nil? value) None $ Some $ decode-map-as value (Map Tag Dynamic)
                 thinking? $ match part
                   (:none) false
                   (:some row)
@@ -750,28 +743,27 @@
                     js-nullish->option $ .-text chunk
                   (:some row) (read-string-field row :text)
                 fallback $ match text
-                  (:some value) (Option :some value)
+                  (:some value) (Some value)
                   (:none)
                     match (get data :promptFeedback)
-                      (:none) (Option :none)
+                      (:none) None
                       (:some feedback)
-                        if (nil? feedback) (Option :none)
-                          read-string-field
-                            decode-map-as feedback $ Map Tag Dynamic
-                            , :blockReason
+                        if (nil? feedback) None $ read-string-field
+                          decode-map-as feedback $ Map Tag Dynamic
+                          , :blockReason
               StreamChunkOutput :text fallback :thinking? thinking?
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GenerateResponseHost (-> genai.sdk/StreamChunkOutput) (:features :js-ffi)
+          :schema $ quote $ Fn GenerateResponseHost (-> StreamChunkOutput) (:features :js-ffi)
         'extract-text $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn extract-text (result)
             match (extract-content-parts result)
-              (:none) (Option :none)
+              (:none) None
               (:some parts)
                 match (first parts)
-                  (:none) (Option :none)
+                  (:none) None
                   (:some part) (read-string-field part :text)
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GenerateResponseHost
+          :schema $ quote $ Fn GenerateResponseHost
             -> $ Option String
             :features :js-ffi
         'files-delete! $ %{} 'CodeEntry (:doc |)
@@ -781,7 +773,7 @@
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'files-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-get! (client name cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -789,14 +781,14 @@
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'files-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-list! (client cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi) (:async)
             .list (.-files client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi)
         'files-upload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-upload! (client file cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost Dynamic (Option genai.sdk/UploadFileConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -804,21 +796,21 @@
               js-object (:file file)
                 :config $ option-map->js cfg upload-file-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost Dynamic (Option genai.sdk/UploadFileConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost Dynamic (Option UploadFileConfig) (-> Dynamic) (:features :js-ffi)
         'generate-content! $ %{} 'CodeEntry
           :doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)"
           :code $ quote $ defn generate-content! (client cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/ContentConfig (-> genai.sdk/GenerateResponseHost) (:features :js-ffi) (:async)
             .generateContent (.-models client) (content-config->js cfg)
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost genai.sdk/ContentConfig (-> genai.sdk/GenerateResponseHost) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost ContentConfig (-> GenerateResponseHost) (:features :js-ffi)
         'generate-content-stream! $ %{} 'CodeEntry
           :doc "|async, calls models.generateContentStream with ContentConfig, returns stream for js-for-await"
           :code $ quote $ defn generate-content-stream! (client cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/ContentConfig (-> Dynamic) (:features :js-ffi) (:async)
             .generateContentStream (.-models client) (content-config->js cfg)
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost genai.sdk/ContentConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost ContentConfig (-> Dynamic) (:features :js-ffi)
         'generate-images! $ %{} 'CodeEntry
           :doc "|async, calls models.generateImages with ImageGenConfig, returns image generation response"
           :code $ quote $ defn generate-images! (client cfg)
@@ -837,7 +829,7 @@
                     :httpOptions $ option->js http-opts
                     :abortSignal $ option->js signal
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost genai.sdk/ImageGenConfig (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost ImageGenConfig (-> JsObject) (:features :js-ffi)
         'generation-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn generation-config->js (cfg)
             js-object
@@ -849,7 +841,7 @@
               :stopSequences $ option->js $ :stop-sequences cfg
               :responseMimeType $ option->js $ :response-mime-type cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GenerationConfig (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn GenerationConfig (-> JsObject) (:features :js-ffi)
         'history->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn history->js (history)
             to-js-data $ map history $ fn (turn)
@@ -857,7 +849,7 @@
                 :role $ option->js $ :role turn
                 :parts $ option->js $ :parts turn
           :examples $ []
-          :schema $ quote $ Fn (List genai.sdk/ChatHistoryTurn) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn (List ChatHistoryTurn) (-> Dynamic) (:features :js-ffi)
         'inline-audio $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn inline-audio (data mime-type)
             {} $ :inline_data $ {} (:data data) (:mime_type mime-type)
@@ -883,25 +875,25 @@
             hint-fn $ Fn genai.sdk/GoogleClientHost String (-> Dynamic) (:features :js-ffi) (:async)
             .cancel (.-interactions client) id
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi)
         'interactions-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-create! (client params)
             hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/CreateParams (-> genai.sdk/InteractionResult) (:features :js-ffi) (:async)
             normalize-interaction $ js-await $ .create (.-interactions client) (params->js params)
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost genai.sdk/CreateParams (-> genai.sdk/InteractionResult) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost CreateParams (-> InteractionResult) (:features :js-ffi)
         'interactions-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-delete! (client id)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (-> Dynamic) (:features :js-ffi) (:async)
             .delete (.-interactions client) id
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi)
         'interactions-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-get! (client id)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (-> genai.sdk/InteractionResult) (:features :js-ffi) (:async)
             normalize-interaction $ js-await $ .get (.-interactions client) id
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (-> genai.sdk/InteractionResult) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (-> InteractionResult) (:features :js-ffi)
         'list-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn list-config->js (cfg)
             js-object
@@ -912,7 +904,7 @@
               :filter $ option->js $ :filter cfg
               :queryBase $ option->js $ :query-base cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ListParams (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn ListParams (-> JsObject) (:features :js-ffi)
         'make-abort-signal $ %{} 'CodeEntry
           :doc "|creates AbortController, stores in *abort-control atom, returns signal; pass atom for external abort control"
           :code $ quote $ defn make-abort-signal (*abort-control)
@@ -921,7 +913,7 @@
               reset! *abort-control controller
               js-ffi.shared/abort-signal controller
           :examples $ []
-          :schema $ quote $ Fn (Ref Dynamic) (-> js-ffi.shared/AbortSignalHost) (:features :js-ffi)
+          :schema $ quote $ Fn (Ref Dynamic) (-> host/AbortSignalHost) (:features :js-ffi)
         'make-http-options $ %{} 'CodeEntry
           :doc "|creates httpOptions JS object with baseUrl for proxy endpoint"
           :code $ quote $ defn make-http-options (base-url)
@@ -939,7 +931,7 @@
                   if has-url?
                     [] $ {} $ :urlContext ({})
                     []
-              if (empty? tools) (Option :none) (Option :some tools)
+              if (empty? tools) None $ Some tools
           :examples $ []
           :schema $ quote $ Fn Bool Bool
             -> $ Option $ List (Map Tag Dynamic)
@@ -984,7 +976,7 @@
                 :contents $ maybe-to-js-data contents
                 :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String Dynamic (Option genai.sdk/GenerationConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
         'models-count-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-count-tokens! (client model contents config)
             hint-fn $ Fn genai.sdk/GoogleClientHost String Dynamic (Option genai.sdk/GenerationConfig) (-> genai.sdk/CountTokensResponse) (:features :js-ffi) (:async)
@@ -993,7 +985,7 @@
                 :contents $ maybe-to-js-data contents
                 :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String Dynamic (Option genai.sdk/GenerationConfig) (-> genai.sdk/CountTokensResponse) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> CountTokensResponse) (:features :js-ffi)
         'models-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-get! (client model cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
@@ -1001,21 +993,21 @@
               js-object (:model model)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'models-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-list! (client cfg)
             hint-fn $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi) (:async)
             .list (.-models client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi)
         'new-client $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn new-client (api-key)
             unsafe-coerce
               new GoogleGenAI $ js-object $ :apiKey api-key
               , 'genai.sdk/GoogleClientHost
           :examples $ []
-          :schema $ quote $ Fn String (-> genai.sdk/GoogleClientHost) (:features :js-ffi)
+          :schema $ quote $ Fn String (-> GoogleClientHost) (:features :js-ffi)
         'new-client-with-base-url $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn new-client-with-base-url (api-key base-url)
             unsafe-coerce
@@ -1023,7 +1015,7 @@
                 :httpOptions $ js-object $ :baseUrl base-url
               , 'genai.sdk/GoogleClientHost
           :examples $ []
-          :schema $ quote $ Fn String String (-> genai.sdk/GoogleClientHost) (:features :js-ffi)
+          :schema $ quote $ Fn String String (-> GoogleClientHost) (:features :js-ffi)
         'new-client-with-options $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn new-client-with-options (options)
             unsafe-coerce
@@ -1036,7 +1028,7 @@
                 :httpOptions $ option->js $ :http-options options
               , 'genai.sdk/GoogleClientHost
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/ClientOptions (-> genai.sdk/GoogleClientHost) (:features :js-ffi)
+          :schema $ quote $ Fn ClientOptions (-> GoogleClientHost) (:features :js-ffi)
         'normalize-count-tokens $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-count-tokens (value)
             decode-map-as
@@ -1047,7 +1039,7 @@
                 [] :totalTokens :sdkHttpResponse
               , 'genai.sdk/CountTokensResponse
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> genai.sdk/CountTokensResponse) (:features :js-ffi)
+          :schema $ quote $ Fn Dynamic (-> CountTokensResponse) (:features :js-ffi)
         'normalize-interaction $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-interaction (value)
             let
@@ -1066,7 +1058,7 @@
                       [] :total_tokens :total_input_tokens :input_tokens_by_modality :total_cached_tokens :total_output_tokens :total_tool_use_tokens :total_thought_tokens :cached_tokens_by_modality :output_tokens_by_modality :tool_use_tokens_by_modality
               decode-map-as (assoc normalized :status status) 'genai.sdk/InteractionResult
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> genai.sdk/InteractionResult) (:features :js-ffi)
+          :schema $ quote $ Fn Dynamic (-> InteractionResult) (:features :js-ffi)
         'option->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn option->js (value)
             match value
@@ -1118,7 +1110,7 @@
                 :abortSignal $ option->js signal
                 :httpOptions $ option->js http-opts
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/CreateParams (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn CreateParams (-> JsObject) (:features :js-ffi)
         'read-status $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-status (value)
             match value
@@ -1130,14 +1122,13 @@
               |requires_action $ InteractionStatus :requires-action
               _ $ raise $ str |Unknown-Interaction-status: value
           :examples $ []
-          :schema $ quote $ Fn String (-> genai.sdk/InteractionStatus)
+          :schema $ quote $ Fn String (-> InteractionStatus)
         'read-string-field $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-string-field (data field)
             match (get data field)
-              (:none) (Option :none)
+              (:none) None
               (:some value)
-                if (nil? value) (Option :none)
-                  Option :some $ decode-map-as value 'String
+                if (nil? value) None $ Some $ decode-map-as value 'String
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic) Tag
             -> $ Option String
@@ -1147,7 +1138,7 @@
               :httpOptions $ option->js $ :http-options cfg
               :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/RequestConfig (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn RequestConfig (-> JsObject) (:features :js-ffi)
         'select-present-fields $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn select-present-fields (data fields)
             .fold fields ({})
@@ -1175,7 +1166,7 @@
               :httpOptions $ option->js $ :http-options cfg
               :abortSignal $ option->js $ :abort-signal cfg
           :examples $ []
-          :schema $ quote $ Fn genai.sdk/UploadFileConfig (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn UploadFileConfig (-> JsObject) (:features :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns genai.sdk
           :require
@@ -1193,8 +1184,8 @@
                 :config $ {} (:temperature 0) (:maxOutputTokens 12)
               match
                 try-parse-json $ js-ffi.contract/expect-string |request-json $ js/JSON.stringify
-                  genai.sdk/params->js $ genai.sdk/CreateParams :model |fixture :input |hello :background (Option :some false) :store (Option :some false) :generation-config $ Option :some
-                    genai.sdk/GenerationConfig :temperature (Option :some 0) :max-output-tokens $ Option :some 12
+                  genai.sdk/params->js $ genai.sdk/CreateParams :model |fixture :input |hello :background (Some false) :store (Some false) :generation-config $ Some
+                    genai.sdk/GenerationConfig :temperature (Some 0) :max-output-tokens $ Some 12
                 (:ok payload) payload
                 (:err message) (raise message)
             assert=
@@ -1203,7 +1194,7 @@
                   :responseModalities $ [] |TEXT
               match
                 try-parse-json $ js-ffi.contract/expect-string |content-json $ js/JSON.stringify
-                  genai.sdk/content-config->js $ genai.sdk/ContentConfig :model |fixture :contents |hello :system-instruction (Option :some |system) :response-modalities $ Option :some ([] |TEXT)
+                  genai.sdk/content-config->js $ genai.sdk/ContentConfig :model |fixture :contents |hello :system-instruction (Some |system) :response-modalities $ Some ([] |TEXT)
                 (:ok payload) payload
                 (:err message) (raise message)
             let
@@ -1212,31 +1203,30 @@
                   :usage $ js-object (:total_tokens 0) (:total_input_tokens nil)
                     :output_tokens_by_modality $ js-array
                     :future_field true
-              assert= (Option :some |:keyword)
+              assert= (Some |:keyword)
                 :text $ genai.sdk/extract-outputs result
               assert= |fixture-id $ :id result
               assert= (genai.sdk/InteractionStatus :completed) (:status result)
-              assert= (Option :some 0)
+              assert= (Some 0)
                 :total_tokens $ .unwrap $ :usage result
-            assert= (Option :some 0)
+            assert= (Some 0)
               :totalTokens $ genai.sdk/normalize-count-tokens $ js-object (:totalTokens 0) (:cachedContentTokenCount 99)
-            assert= (Option :none) (genai.sdk/make-search-tools false false)
+            assert= None $ genai.sdk/make-search-tools false false
             assert=
               [] $ {} (:role |user)
                 :parts $ [] $ {} (:text |hello)
               match
                 try-parse-json $ js-ffi.contract/expect-string |history-json $ js/JSON.stringify
-                  genai.sdk/history->js $ [] $ genai.sdk/ChatHistoryTurn :role (Option :some |user) :parts
-                    Option :some $ [] $ {} (:text |hello)
+                  genai.sdk/history->js $ [] $ genai.sdk/ChatHistoryTurn :role (Some |user) :parts
+                    Some $ [] $ {} (:text |hello)
                 (:ok payload) payload
                 (:err message) (raise message)
             println |Offline-request-config-tests-passed
-            assert= (Option :some |offline-fixture)
+            assert= (Some |offline-fixture)
               genai.sdk/extract-image-bytes $ js-object $ :generatedImages
                 js-array $ js-object $ :image
                   js-object $ :imageBytes |offline-fixture
-            assert= (Option :none)
-              genai.sdk/extract-image-bytes $ js-object
+            assert= None $ genai.sdk/extract-image-bytes $ js-object
             , &unit
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
