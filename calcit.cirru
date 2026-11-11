@@ -45,9 +45,11 @@
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
         'FileReaderHost $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ deftrait FileReaderHost (:onload 'Dynamic) (:onerror 'Dynamic)
+          :code $ quote $ deftrait FileReaderHost
+            :onload $ JsNullish $ Fn JsObject (-> Unit)
+            :onerror $ JsNullish $ Fn JsObject (-> Unit)
             :result $ JsNullish String
-            .read-as-data-url! $ Fn genai.main/FileReaderHost Dynamic $ -> Unit
+            .read-as-data-url! $ Fn genai.main/FileReaderHost genai.main/BrowserFileHost $ -> Unit
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
             :names $ {} $ :read-as-data-url! |readAsDataURL
@@ -79,7 +81,7 @@
                     input $ {} (:type |file) (:accept |audio/*)
                       :on-change $ fn (e d!)
                         hint-fn $ Fn respo.schema/RespoEvent
-                          Fn genai.main/DispatchOp $ -> Unit
+                          Fn DispatchOp $ -> Unit
                           -> Unit
                           :features :js-ffi
                         match
@@ -121,7 +123,7 @@
             :features :js-ffi
         'handle-transcribe! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn handle-transcribe! (client file)
-            hint-fn $ Fn genai.sdk/GoogleClientHost genai.main/BrowserFileHost (-> Unit) (:features :js-ffi) (:async)
+            hint-fn $ Fn sdk/GoogleClientHost BrowserFileHost (-> Unit) (:features :js-ffi) (:async)
             reset! *store $ assoc (assoc @*store :loading? true) :error-msg None
             try
               let
@@ -163,18 +165,21 @@
           :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'read-as-base64 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-as-base64 (file)
-            hint-fn $ Fn genai.main/BrowserFileHost (-> String) (:features :js-ffi) (:async)
+            hint-fn $ Fn BrowserFileHost (-> String) (:features :js-ffi) (:async)
             js-ffi.contract/expect-string |FileReader-base64 $ js-await $ new js/Promise
               fn (resolve reject)
                 let
                     reader $ unsafe-coerce (new js/FileReader) 'genai.main/FileReaderHost
-                  js-set reader :onload $ fn (e)
-                    match
-                      js-nullish->option $ .-result reader
-                      (:none) (reject "|FileReader completed without a data URL")
-                      (:some data-url)
-                        resolve $ .unwrap $ nth (split data-url |,) 1
-                  js-set reader :onerror $ fn (e) (reject e)
+                  set! (.-onload reader)
+                    fn (e)
+                      match
+                        js-nullish->option $ .-result reader
+                        (:none) (reject "|FileReader completed without a data URL")
+                        (:some data-url)
+                          resolve $ .unwrap $ nth (split data-url |,) 1
+                      , &unit
+                  set! (.-onerror reader)
+                    fn (e) (reject e) &unit
                   .read-as-data-url! reader file
           :examples $ []
           :schema $ quote $ Fn BrowserFileHost (-> String) (:features :js-ffi) (:async)
@@ -188,7 +193,7 @@
               .unwrap $ respo.ffi.browser/query-selector |.app
               comp-container (:result @*store) (:loading? @*store) (:error-msg @*store)
                 fn (file)
-                  hint-fn $ Fn genai.main/BrowserFileHost (-> Unit) (:features :js-ffi)
+                  hint-fn $ Fn BrowserFileHost (-> Unit) (:features :js-ffi)
                   let
                       api-key $ match (get-env |GEMINI_API_KEY)
                         (:some key) (Some key)
@@ -555,7 +560,7 @@
           :schema $ quote $ Fn CreateCachedContentConfig (-> JsObject) (:features :js-ffi)
         'caches-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-create! (client model cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (Option CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .create (.-caches client)
               js-object (:model model)
                 :config $ option-map->js cfg cached-content-config->js
@@ -563,7 +568,7 @@
           :schema $ quote $ Fn GoogleClientHost String (Option CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi)
         'caches-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-delete! (client name cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .delete (.-caches client)
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
@@ -571,7 +576,7 @@
           :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'caches-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-get! (client name cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .get (.-caches client)
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
@@ -579,7 +584,7 @@
           :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'caches-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-list! (client cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi) (:async)
             .list (.-caches client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
@@ -600,7 +605,7 @@
             :features :js-ffi
         'chat-send-message! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-send-message! (chat message config)
-            hint-fn $ Fn genai.sdk/ChatHost Dynamic (Option genai.sdk/GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .sendMessage chat $ js-object
               :message $ maybe-to-js-data message
               :config $ option-map->js config generation-config->js
@@ -608,7 +613,7 @@
           :schema $ quote $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
         'chat-send-message-stream! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-send-message-stream! (chat message config)
-            hint-fn $ Fn genai.sdk/ChatHost Dynamic (Option genai.sdk/GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .sendMessageStream chat $ js-object
               :message $ maybe-to-js-data message
               :config $ option-map->js config generation-config->js
@@ -768,7 +773,7 @@
             :features :js-ffi
         'files-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-delete! (client name cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .delete (.-files client)
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
@@ -776,7 +781,7 @@
           :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'files-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-get! (client name cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .get (.-files client)
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
@@ -784,14 +789,14 @@
           :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'files-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-list! (client cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi) (:async)
             .list (.-files client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
           :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi)
         'files-upload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-upload! (client file cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost Dynamic (Option genai.sdk/UploadFileConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost Dynamic (Option UploadFileConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .upload (.-files client)
               js-object (:file file)
                 :config $ option-map->js cfg upload-file-config->js
@@ -800,21 +805,21 @@
         'generate-content! $ %{} 'CodeEntry
           :doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)"
           :code $ quote $ defn generate-content! (client cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/ContentConfig (-> genai.sdk/GenerateResponseHost) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost ContentConfig (-> GenerateResponseHost) (:features :js-ffi) (:async)
             .generateContent (.-models client) (content-config->js cfg)
           :examples $ []
           :schema $ quote $ Fn GoogleClientHost ContentConfig (-> GenerateResponseHost) (:features :js-ffi)
         'generate-content-stream! $ %{} 'CodeEntry
           :doc "|async, calls models.generateContentStream with ContentConfig, returns stream for js-for-await"
           :code $ quote $ defn generate-content-stream! (client cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/ContentConfig (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost ContentConfig (-> Dynamic) (:features :js-ffi) (:async)
             .generateContentStream (.-models client) (content-config->js cfg)
           :examples $ []
           :schema $ quote $ Fn GoogleClientHost ContentConfig (-> Dynamic) (:features :js-ffi)
         'generate-images! $ %{} 'CodeEntry
           :doc "|async, calls models.generateImages with ImageGenConfig, returns image generation response"
           :code $ quote $ defn generate-images! (client cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/ImageGenConfig (-> JsObject) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost ImageGenConfig (-> JsObject) (:features :js-ffi) (:async)
             let
                 model $ :model cfg
                 prompt $ :prompt cfg
@@ -872,25 +877,25 @@
           :schema $ quote $ Fn T (-> Dynamic) (:generics T) (:features :js-ffi)
         'interactions-cancel! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-cancel! (client id)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi) (:async)
             .cancel (.-interactions client) id
           :examples $ []
           :schema $ quote $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi)
         'interactions-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-create! (client params)
-            hint-fn $ Fn genai.sdk/GoogleClientHost genai.sdk/CreateParams (-> genai.sdk/InteractionResult) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost CreateParams (-> InteractionResult) (:features :js-ffi) (:async)
             normalize-interaction $ js-await $ .create (.-interactions client) (params->js params)
           :examples $ []
           :schema $ quote $ Fn GoogleClientHost CreateParams (-> InteractionResult) (:features :js-ffi)
         'interactions-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-delete! (client id)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi) (:async)
             .delete (.-interactions client) id
           :examples $ []
           :schema $ quote $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi)
         'interactions-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-get! (client id)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (-> genai.sdk/InteractionResult) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (-> InteractionResult) (:features :js-ffi) (:async)
             normalize-interaction $ js-await $ .get (.-interactions client) id
           :examples $ []
           :schema $ quote $ Fn GoogleClientHost String (-> InteractionResult) (:features :js-ffi)
@@ -935,7 +940,7 @@
           :examples $ []
           :schema $ quote $ Fn Bool Bool
             -> $ Option $ List
-              Map Tag $ Map Tag Never
+              Map Tag $ Map Tag Unit
         'make-thinking-config $ %{} 'CodeEntry
           :doc "|creates thinkingConfig JS object with thinkingBudget and includeThoughts fields"
           :code $ quote $ defn make-thinking-config (budget include-thoughts?)
@@ -971,7 +976,7 @@
             :features :js-ffi
         'models-compute-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-compute-tokens! (client model contents config)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String Dynamic (Option genai.sdk/GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .computeTokens (.-models client)
               js-object (:model model)
                 :contents $ maybe-to-js-data contents
@@ -980,7 +985,7 @@
           :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
         'models-count-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-count-tokens! (client model contents config)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String Dynamic (Option genai.sdk/GenerationConfig) (-> genai.sdk/CountTokensResponse) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> CountTokensResponse) (:features :js-ffi) (:async)
             normalize-count-tokens $ js-await $ .countTokens (.-models client)
               js-object (:model model)
                 :contents $ maybe-to-js-data contents
@@ -989,7 +994,7 @@
           :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> CountTokensResponse) (:features :js-ffi)
         'models-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-get! (client model cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost String (Option genai.sdk/RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .get (.-models client)
               js-object (:model model)
                 :config $ option-map->js cfg request-config->js
@@ -997,7 +1002,7 @@
           :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
         'models-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-list! (client cfg)
-            hint-fn $ Fn genai.sdk/GoogleClientHost (Option genai.sdk/ListParams) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi) (:async)
             .list (.-models client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
