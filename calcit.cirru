@@ -921,7 +921,7 @@
           :examples $ []
           :schema $ quote $ Fn String (-> JsObject) (:features :js-ffi)
         'make-search-tools $ %{} 'CodeEntry
-          :doc "|builds tools array with googleSearch and/or urlContext based on boolean flags; returns nil if neither"
+          :doc "|Build tool entries with empty option maps for Google Search and URL Context. Returns None when neither tool is enabled."
           :code $ quote $ defn make-search-tools (search? has-url?)
             let
                 tools $ concat
@@ -934,7 +934,8 @@
               if (empty? tools) None $ Some tools
           :examples $ []
           :schema $ quote $ Fn Bool Bool
-            -> $ Option $ List (Map Tag Dynamic)
+            -> $ Option $ List
+              Map Tag $ Map Tag Never
         'make-thinking-config $ %{} 'CodeEntry
           :doc "|creates thinkingConfig JS object with thinkingBudget and includeThoughts fields"
           :code $ quote $ defn make-thinking-config (budget include-thoughts?)
@@ -1130,8 +1131,9 @@
               (:some value)
                 if (nil? value) None $ Some $ decode-map-as value 'String
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) Tag
+          :schema $ quote $ Fn (Map Tag V) Tag
             -> $ Option String
+            :generics V
         'request-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn request-config->js (cfg)
             js-object
@@ -1141,16 +1143,17 @@
           :schema $ quote $ Fn RequestConfig (-> JsObject) (:features :js-ffi)
         'select-present-fields $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn select-present-fields (data fields)
-            .fold fields ({})
+            .fold fields (empty data)
               fn (acc field)
-                hint-fn $ Fn (Map Tag Dynamic) Tag $ -> (Map Tag Dynamic)
+                hint-fn $ Fn (Map Tag V) Tag $ -> (Map Tag V)
                 match (get data field)
                   (:none) acc
                   (:some value)
                     if (nil? value) acc $ assoc acc field value
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) (List Tag)
-            -> $ Map Tag Dynamic
+          :schema $ quote $ Fn (Map Tag V) (List Tag)
+            -> $ Map Tag V
+            :generics V
         'text-part $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn text-part (text)
             {} $ :text text
