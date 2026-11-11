@@ -258,6 +258,10 @@
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
+        'ChatMessageField $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion ChatMessageField Tag String
+          :examples $ []
+          :schema $ quote UnionDef
         'ChatsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ChatsHost
             .create $ Fn genai.sdk/ChatsHost Dynamic $ -> genai.sdk/ChatHost
@@ -958,7 +962,7 @@
         'messages->contents $ %{} 'CodeEntry
           :doc "|converts Calcit messages [{:role :user/:assistant :content str}] to Gemini contents format [{role parts:[{text}]}]"
           :code $ quote $ defn messages->contents (messages)
-            to-js-data $ map messages $ fn (message)
+            js-array & $ map messages $ fn (message)
               let
                   role $ decode-map-as
                     .unwrap $ get message :role
@@ -966,13 +970,13 @@
                   text $ decode-map-as
                     .unwrap $ get message :content
                     , 'String
-                {}
+                js-object
                   :role $ if (= role :assistant) |model |user
-                  :parts $ [] $ {} (:text text)
+                  :parts $ js-array $ js-object (:text text)
           :examples $ []
           :schema $ quote $ Fn
-            List $ Map Tag Dynamic
-            -> Dynamic
+            List $ Map Tag ChatMessageField
+            -> JsObject
             :features :js-ffi
         'models-compute-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-compute-tokens! (client model contents config)
