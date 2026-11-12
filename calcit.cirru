@@ -252,7 +252,7 @@
           :schema $ quote StructDef
         'ChatHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ChatHost
-            .getHistory $ Fn genai.sdk/ChatHost $ -> Dynamic
+            .getHistory $ Fn genai.sdk/ChatHost $ -> JsObject
             .sendMessage $ Fn genai.sdk/ChatHost Dynamic $ -> Dynamic
             .sendMessageStream $ Fn genai.sdk/ChatHost Dynamic $ -> Dynamic
           :examples $ []
@@ -853,12 +853,12 @@
           :schema $ quote $ Fn GenerationConfig (-> JsObject) (:features :js-ffi)
         'history->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn history->js (history)
-            to-js-data $ map history $ fn (turn)
+            js-array & $ map history $ fn (turn)
               js-object
                 :role $ option->js $ :role turn
                 :parts $ option->js $ :parts turn
           :examples $ []
-          :schema $ quote $ Fn (List ChatHistoryTurn) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn (List ChatHistoryTurn) (-> JsObject) (:features :js-ffi)
         'inline-audio $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn inline-audio (data mime-type)
             {} $ :inline_data $ {} (:data data) (:mime_type mime-type)
