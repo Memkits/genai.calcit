@@ -448,7 +448,7 @@
           :schema $ quote EnumDef
         'InteractionsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait InteractionsHost
-            .cancel $ Fn genai.sdk/InteractionsHost String $ -> Dynamic
+            .cancel $ Fn genai.sdk/InteractionsHost String $ -> genai.sdk/InteractionResponseHost
             .create $ Fn genai.sdk/InteractionsHost JsObject $ -> genai.sdk/InteractionResponseHost
             .delete $ Fn genai.sdk/InteractionsHost String $ -> Dynamic
             .get $ Fn genai.sdk/InteractionsHost String $ -> genai.sdk/InteractionResponseHost
@@ -881,10 +881,10 @@
           :schema $ quote $ Fn T (-> Dynamic) (:generics T) (:features :js-ffi)
         'interactions-cancel! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-cancel! (client id)
-            hint-fn $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost String (-> InteractionResponseHost) (:features :js-ffi) (:async)
             .cancel (.-interactions client) id
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost String (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (-> InteractionResponseHost) (:features :js-ffi)
         'interactions-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn interactions-create! (client params)
             hint-fn $ Fn GoogleClientHost CreateParams (-> InteractionResult) (:features :js-ffi) (:async)
