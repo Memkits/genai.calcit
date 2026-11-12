@@ -288,7 +288,7 @@
             :response-modalities $ Option $ List String
             :response-mime-type $ Option String
             :cached-content $ Option String
-            :abort-signal $ Option Dynamic
+            :abort-signal $ Option host/AbortSignalHost
             :http-options $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
@@ -319,7 +319,7 @@
             :tool-config $ Option Dynamic
             :kms-key-name $ Option String
             :http-options $ Option Dynamic
-            :abort-signal $ Option Dynamic
+            :abort-signal $ Option host/AbortSignalHost
           :examples $ []
           :schema $ quote StructDef
         'CreateParams $ %{} 'CodeEntry (:doc |)
@@ -334,7 +334,7 @@
             :response-modalities $ Option $ List String
             :response-format $ Option Dynamic
             :response-mime-type $ Option String
-            :abort-signal $ Option Dynamic
+            :abort-signal $ Option host/AbortSignalHost
             :http-options $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
@@ -401,7 +401,7 @@
           :code $ quote $ defstruct ImageGenConfig (:model String) (:prompt String)
             :number-of-images $ Option Number
             :include-rai-reason $ Option Bool
-            :abort-signal $ Option Dynamic
+            :abort-signal $ Option host/AbortSignalHost
             :http-options $ Option Dynamic
           :examples $ []
           :schema $ quote StructDef
@@ -462,7 +462,7 @@
             :filter $ Option String
             :query-base $ Option Bool
             :http-options $ Option Dynamic
-            :abort-signal $ Option Dynamic
+            :abort-signal $ Option host/AbortSignalHost
           :examples $ []
           :schema $ quote StructDef
         'ModelsHost $ %{} 'CodeEntry (:doc |)
@@ -486,7 +486,7 @@
         'RequestConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct RequestConfig
             :http-options $ Option Dynamic
-            :abort-signal $ Option Dynamic
+            :abort-signal $ Option host/AbortSignalHost
           :examples $ []
           :schema $ quote StructDef
         'SdkUsage $ %{} 'CodeEntry (:doc |)
@@ -532,7 +532,7 @@
             :mime-type $ Option String
             :display-name $ Option String
             :http-options $ Option Dynamic
-            :abort-signal $ Option Dynamic
+            :abort-signal $ Option host/AbortSignalHost
           :examples $ []
           :schema $ quote StructDef
         'Usage $ %{} 'CodeEntry (:doc |)
