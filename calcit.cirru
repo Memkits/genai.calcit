@@ -142,7 +142,7 @@
                 , &unit
             , &unit
           :examples $ []
-          :schema $ quote $ Fn sdk/GoogleClientHost BrowserFileHost (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn sdk/GoogleClientHost BrowserFileHost (-> Unit) (:features :js-ffi :state)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! () (hint-fn Async)
             let
@@ -162,7 +162,7 @@
                   println |Interaction-id: $ :interaction-id result
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi)
         'read-as-base64 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn read-as-base64 (file)
             hint-fn $ Fn BrowserFileHost (-> String) (:features :js-ffi) (:async)
@@ -186,7 +186,7 @@
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println |reloaded)
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             render!
@@ -209,17 +209,17 @@
                           , &unit
               fn (op) &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'web-main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn web-main! () (println "|Web app started.") (render-app!)
             add-watch! *store :rerender $ fn (_next _previous) (render-app!)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'web-reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn web-reload! () (clear-cache!) (render-app!) (println |web-reloaded)
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns genai.main
           :require (genai.sdk :as sdk)
@@ -922,7 +922,7 @@
               reset! *abort-control controller
               js-ffi.shared/abort-signal controller
           :examples $ []
-          :schema $ quote $ Fn (Ref Dynamic) (-> host/AbortSignalHost) (:features :js-ffi)
+          :schema $ quote $ Fn (Ref Dynamic) (-> host/AbortSignalHost) (:features :js-ffi :state)
         'make-http-options $ %{} 'CodeEntry
           :doc "|creates httpOptions JS object with baseUrl for proxy endpoint"
           :code $ quote $ defn make-http-options (base-url)
@@ -1241,7 +1241,7 @@
             assert= None $ genai.sdk/extract-image-bytes $ js-object
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns genai.test-config
           :require (genai.sdk :as sdk) (js-ffi.contract :as contract)
