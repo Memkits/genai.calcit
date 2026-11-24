@@ -1083,9 +1083,9 @@
               (:none) js/undefined
           :examples $ []
           :schema $ quote $ Fn (Option T)
-            Fn T (-> Dynamic) (:features :js-ffi)
+            Fn T (-> U) (:features :js-ffi)
             -> Dynamic
-            :generics T
+            :generics T U
             :features :js-ffi
         'params->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn params->js (p)
