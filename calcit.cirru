@@ -526,6 +526,9 @@
             :content Dynamic
           :examples $ []
           :schema $ quote StructDef
+        'UploadFile $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion UploadFile String browser/BlobHost
+          :examples $ []
         'UploadFileConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct UploadFileConfig
             :name $ Option String
@@ -800,12 +803,12 @@
           :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi)
         'files-upload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn files-upload! (client file cfg)
-            hint-fn $ Fn GoogleClientHost Dynamic (Option UploadFileConfig) (-> Dynamic) (:features :js-ffi) (:async)
+            hint-fn $ Fn GoogleClientHost UploadFile (Option UploadFileConfig) (-> Dynamic) (:features :js-ffi) (:async)
             .upload (.-files client)
               js-object (:file file)
                 :config $ option-map->js cfg upload-file-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost Dynamic (Option UploadFileConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost UploadFile (Option UploadFileConfig) (-> Dynamic) (:features :js-ffi)
         'generate-content! $ %{} 'CodeEntry
           :doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)"
           :code $ quote $ defn generate-content! (client cfg)
@@ -1184,6 +1187,7 @@
           :require
             |@google/genai :refer $ GoogleGenAI
             js-ffi.shared :as host
+            js-ffi.browser :as browser
     'genai.test-config $ %{} 'FileEntry
       :defs $ {} $ 'main!
         %{} 'CodeEntry (:doc |)
