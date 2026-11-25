@@ -4,6 +4,8 @@
 
 ## 使用者影响
 
+候选 0.0.5 将 `SdkUsage` 四类 `*_tokens_by_modality` 列表的条目从开放值改为 `ModalityTokenUsage`：`modality` 为 `Option String`、`tokens` 为 `Option Number`，原先从 Map 读取这两项的调用方需要改用结构字段。SDK 返回的其他条目字段保留在 `:extra` Map；已知字段类型错误会在解码时报告。
+
 CLI / `@calcit/procs` 配对正式 **0.45.1**，升级后需重新安装整张依赖图、生成
 Node/Web 产物并刷新。使用已发布 Respo **0.19.17**、UI **0.16.4**、JS-FFI
 **0.2.23**，不依赖本地候选或未发布版本。停止序列和响应模态的配置字段现在接受 `Option (List String)`。
@@ -15,7 +17,7 @@ Node/Web 产物并刷新。使用已发布 Respo **0.19.17**、UI **0.16.4**、J
 请求配置构造器声明返回 `JsObject`，文本和内联音频部件分别返回键和值类型明确的 Map。交互请求的 ID 在宿主边界声明为 String，创建请求声明为 JsObject。动态 SDK 响应继续由现有归一化函数读取。
 
 此前工具链迁移用官方工具转换了 185 处旧类型表达式。Web 文件选择使用 RespoEvent 和 DOM 事件类型，文件输入和文件通过宿主字段检查。原 Node、Web 与
-公共 SDK 门禁、离线请求/响应断言保留，不增加强转、Dynamic、预算或测试脚手架。
+公共 SDK 门禁、离线请求/响应断言保留，保留原门禁；模态条目未知字段通过受检的 `:extra` Map 保留。
 一次完整 strict 已覆盖 default/test-config/web 三入口，CI 明确断言状态和空诊断，
 不重复运行相同工作流。npm 发布等待为一小时，无单包例外。
 
