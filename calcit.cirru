@@ -465,6 +465,13 @@
             :abort-signal $ Option host/AbortSignalHost
           :examples $ []
           :schema $ quote StructDef
+        'ModalityTokenUsage $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct ModalityTokenUsage
+            :modality $ Option String
+            :tokens $ Option Number
+            :extra $ Map Tag Dynamic
+          :examples $ []
+          :schema $ quote StructDef
         'ModelsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ModelsHost
             .generateContent $ Fn genai.sdk/ModelsHost JsObject $ -> genai.sdk/GenerateResponseHost
@@ -493,14 +500,14 @@
           :code $ quote $ defstruct SdkUsage
             :total_tokens $ Option Number
             :total_input_tokens $ Option Number
-            :input_tokens_by_modality $ Option $ List Dynamic
+            :input_tokens_by_modality $ Option $ List genai.sdk/ModalityTokenUsage
             :total_cached_tokens $ Option Number
             :total_output_tokens $ Option Number
             :total_tool_use_tokens $ Option Number
             :total_thought_tokens $ Option Number
-            :cached_tokens_by_modality $ Option $ List (Map Tag Dynamic)
-            :output_tokens_by_modality $ Option $ List (Map Tag Dynamic)
-            :tool_use_tokens_by_modality $ Option $ List (Map Tag Dynamic)
+            :cached_tokens_by_modality $ Option $ List genai.sdk/ModalityTokenUsage
+            :output_tokens_by_modality $ Option $ List genai.sdk/ModalityTokenUsage
+            :tool_use_tokens_by_modality $ Option $ List genai.sdk/ModalityTokenUsage
           :examples $ []
           :schema $ quote StructDef
         'StreamChunkOutput $ %{} 'CodeEntry (:doc |)
@@ -1066,12 +1073,33 @@
                 normalized $ match (get fields :usage)
                   (:none) fields
                   (:some usage)
-                    assoc fields :usage $ select-present-fields
+                    assoc fields :usage $ normalize-modality-lists $ select-present-fields
                       decode-map-as usage $ Map Tag Dynamic
                       [] :total_tokens :total_input_tokens :input_tokens_by_modality :total_cached_tokens :total_output_tokens :total_tool_use_tokens :total_thought_tokens :cached_tokens_by_modality :output_tokens_by_modality :tool_use_tokens_by_modality
               decode-map-as (assoc normalized :status status) 'genai.sdk/InteractionResult
           :examples $ []
           :schema $ quote $ Fn Dynamic (-> InteractionResult) (:features :js-ffi)
+        'normalize-modality-entry $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn normalize-modality-entry (value)
+            let
+                data $ decode-map-as value $ Map Tag Dynamic
+                known $ select-present-fields data $ [] :modality :tokens
+                extra $ dissoc (dissoc data :modality) :tokens
+              decode-map-as (assoc known :extra extra) 'genai.sdk/ModalityTokenUsage
+          :examples $ []
+          :schema $ quote $ Fn Input (-> ModalityTokenUsage) (:generics Input)
+        'normalize-modality-lists $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn normalize-modality-lists (usage)
+            .fold ([] :input_tokens_by_modality :cached_tokens_by_modality :output_tokens_by_modality :tool_use_tokens_by_modality) usage $ fn (acc key)
+              match (get acc key)
+                (:none) acc
+                (:some value)
+                  assoc acc key $ .map
+                    decode-map-as value $ List Dynamic
+                    , normalize-modality-entry
+          :examples $ []
+          :schema $ quote $ Fn (Map Tag Dynamic)
+            -> $ Map Tag Dynamic
         'option->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn option->js (value)
             match value
@@ -1243,6 +1271,41 @@
                 js-array $ js-object $ :image
                   js-object $ :imageBytes |offline-fixture
             assert= None $ genai.sdk/extract-image-bytes $ js-object
+            let
+                result $ genai.sdk/normalize-interaction $ js-object (:id |typed-fixture) (:status |completed)
+                  :usage $ js-object
+                    :input_tokens_by_modality $ js-array $ js-object (:modality |text) (:tokens 0) (:future_field |preserve-me)
+                    :cached_tokens_by_modality $ js-array $ js-object (:modality |image) (:tokens 2)
+                    :output_tokens_by_modality $ js-array $ js-object (:modality |audio) (:tokens 3)
+                    :tool_use_tokens_by_modality $ js-array $ js-object
+                usage $ .unwrap $ :usage result
+                input $ .unwrap $ .first
+                  .unwrap $ :input_tokens_by_modality usage
+                cached $ .unwrap $ .first
+                  .unwrap $ :cached_tokens_by_modality usage
+                output $ .unwrap $ .first
+                  .unwrap $ :output_tokens_by_modality usage
+                tool $ .unwrap $ .first
+                  .unwrap $ :tool_use_tokens_by_modality usage
+              assert= (Some |text) (:modality input)
+              assert= (Some 0) (:tokens input)
+              assert= (Some |image) (:modality cached)
+              assert= (Some 2) (:tokens cached)
+              assert= (Some |audio) (:modality output)
+              assert= (Some 3) (:tokens output)
+              assert= None $ :modality tool
+              assert= None $ :tokens tool
+              assert= (Some |preserve-me)
+                get (:extra input) :future_field
+            let
+                rejected $ try
+                  do
+                    genai.sdk/normalize-interaction $ js-object (:id |bad-usage) (:status |completed)
+                      :usage $ js-object $ :input_tokens_by_modality
+                        js-array $ js-object $ :tokens |invalid
+                    , false
+                  fn (error) true
+              assert= true rejected
             , &unit
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi)
