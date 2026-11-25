@@ -302,10 +302,15 @@
           :code $ quote $ defenum ContentOutput (:text genai.sdk/TextContent) (:image genai.sdk/ImageContent) (:thought genai.sdk/ThoughtContent) (:function-call genai.sdk/FunctionCallContent) (:function-result genai.sdk/FunctionResultContent)
           :examples $ []
           :schema $ quote EnumDef
+        'CountTokensHttpResponse $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defenum CountTokensHttpResponse (:host JsObject js-ffi.shared/ResponseHost)
+            :legacy $ Map Tag Dynamic
+          :examples $ []
+          :schema $ quote EnumDef
         'CountTokensResponse $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct CountTokensResponse
             :totalTokens $ Option Number
-            :sdkHttpResponse $ Option Dynamic
+            :sdkHttpResponse $ Option genai.sdk/CountTokensHttpResponse
           :examples $ []
           :schema $ quote StructDef
         'CreateCachedContentConfig $ %{} 'CodeEntry (:doc |)
@@ -1051,13 +1056,32 @@
           :schema $ quote $ Fn ClientOptions (-> GoogleClientHost) (:features :js-ffi)
         'normalize-count-tokens $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-count-tokens (value)
-            decode-map-as
-              select-present-fields
-                decode-map-as
-                  tagging-edn $ to-calcit-data value true
-                  Map Tag Dynamic
-                [] :totalTokens :sdkHttpResponse
-              , 'genai.sdk/CountTokensResponse
+            if (map? value)
+              let
+                  data $ decode-map-as
+                    tagging-edn $ to-calcit-data value true
+                    Map Tag Dynamic
+                  total $ get data :totalTokens
+                  http $ get data :sdkHttpResponse
+                CountTokensResponse :totalTokens
+                  match total
+                    (:none) None
+                    (:some raw)
+                      if (nil? raw) None $ Some $ decode-map-as raw 'Number
+                  , :sdkHttpResponse $ match http
+                    (:none) None
+                    (:some raw)
+                      if (nil? raw) None $ Some $ CountTokensHttpResponse :legacy
+                        decode-map-as raw $ Map Tag Dynamic
+              let
+                  raw-total $ js-ffi.contract/object-field |CountTokensResponse value |totalTokens
+                  raw-http $ js-ffi.contract/object-field |CountTokensResponse value |sdkHttpResponse
+                CountTokensResponse :totalTokens
+                  if (js-nullish? raw-total) None $ Some $ js-ffi.contract/expect-number |CountTokensResponse.totalTokens raw-total
+                  , :sdkHttpResponse $ if (js-nullish? raw-http) None $ let
+                      wrapper $ js-ffi.contract/expect-object |CountTokensResponse.sdkHttpResponse raw-http
+                      response $ host/response-host $ js-ffi.contract/object-field |HttpResponse wrapper |responseInternal
+                    Some $ CountTokensHttpResponse :host wrapper response
           :examples $ []
           :schema $ quote $ Fn Dynamic (-> CountTokensResponse) (:features :js-ffi)
         'normalize-interaction $ %{} 'CodeEntry (:doc |)
