@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { HttpResponse } from "@google/genai";
 import * as core from "../js-out/calcit.core.mjs";
 import { normalize_count_tokens } from "../js-out/genai.sdk.mjs";
+import { response_json } from "../js-out/js-ffi.shared.mjs";
 
 const field = (value, name) => value.nthAt(value.fields.findIndex((tag) => tag.value === name), core.newTag(name));
 const some = (value) => {
@@ -21,7 +22,9 @@ assert.equal(http.extra[0], original);
 assert.equal(http.extra[1], response);
 assert.equal(http.extra[1].status, 201);
 assert.equal(http.extra[1].headers.get("content-type"), "application/json");
-assert.deepEqual(await http.extra[1].json(), { ok: true });
+const body = await response_json(http.extra[1]);
+assert.equal(body.tag.value, "ok");
+assert.deepEqual(body.extra[0], { ok: true });
 assert.equal(some(field(result, "totalTokens")), 0);
 assert.equal(field(normalize_count_tokens({}), "sdkHttpResponse").tag.value, "none");
 assert.throws(() => normalize_count_tokens({ sdkHttpResponse: {} }));
