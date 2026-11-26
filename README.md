@@ -4,6 +4,8 @@
 
 ## 使用者影响
 
+候选 0.0.6 修复 token 计数的 HTTP 响应：`:sdkHttpResponse` 现在返回 `Option CountTokensHttpResponse`。`:host` 分支包含原 SDK 对象及经检查的标准 `ResponseHost`，可读取状态、响应头和 body；旧 Calcit Map 输入走 `:legacy` 分支并保留其 Map。原先把该字段当作 Map 读取的调用方需要适配分支。
+
 候选 0.0.5 将 `SdkUsage` 四类 `*_tokens_by_modality` 列表的条目从开放值改为 `ModalityTokenUsage`：`modality` 为 `Option String`、`tokens` 为 `Option Number`，原先从 Map 读取这两项的调用方需要改用结构字段。SDK 返回的其他条目字段保留在 `:extra` Map；已知字段类型错误会在解码时报告。
 
 CLI / `@calcit/procs` 配对正式 **0.45.1**，升级后需重新安装整张依赖图、生成
