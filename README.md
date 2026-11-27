@@ -139,6 +139,10 @@ let
 
 ### 文件与缓存
 
+缓存创建与读取需要 `js-await`，返回 SDK 的 `CachedContentHost`，其名称、模型和时间字段为 `JsNullish String`；删除和列表返回宿主对象，列表保留原分页器。直接调用 `CachesHost` 方法也必须等待；创建、读取、删除接收请求对象，列表还允许 undefined。宿主类型描述 SDK 合同，不验证远端响应。
+
+文件上传和读取需要 `js-await`，返回 `UploadedFileHost`，名称、MIME 类型、URI 和时间字段均为 `JsNullish String`；上传仍接受路径或 Blob，删除和列表保留 SDK 返回的宿主对象。直接调用 `FilesHost` 方法也需要等待。
+
 ```cirru
 let
     upload-config $ sdk/UploadFileConfig :mime-type $ Option :some |text/plain
@@ -148,10 +152,6 @@ let
   println file
   println cache
 ```
-
-缓存创建与读取需要 `js-await`，返回 SDK 的 `CachedContentHost`，其名称、模型和时间字段为 `JsNullish String`；删除和列表返回宿主对象，列表保留原分页器。直接调用 `CachesHost` 方法也必须等待；创建、读取、删除接收请求对象，列表还允许 undefined。宿主类型描述 SDK 合同，不验证远端响应。
-
-文件上传和读取需要 `js-await`，返回 `UploadedFileHost`，名称、MIME 类型、URI 和时间字段均为 `JsNullish String`；上传仍接受路径或 Blob，删除和列表保留 SDK 返回的宿主对象。直接调用 `FilesHost` 方法也需要等待。
 
 其他未建模的异构原生 SDK 返回值仍保留 FFI Dynamic 边界；
 本次没有把未建模的服务响应伪装成 Struct。按需要在真实使用位置检查/解码。
