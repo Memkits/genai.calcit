@@ -125,6 +125,17 @@ sdk/generate-content! client $ sdk/ContentConfig :model |gemini-2.5-flash :conte
 
 systemInstruction 序列化到 SDK 的 config 内，而不是请求顶层。
 
+HTTP 配置也可以选择受类型检查的构造方式，再传入现有配置入口：
+
+```cirru
+let
+    http $ sdk/typed-http-options->js $ sdk/TypedHttpOptions :base-url (Some |https://example.invalid) :timeout (Some 0) :retry-options $ Some $ sdk/HttpRetryOptions :attempts (Some 1)
+    cfg $ sdk/RequestConfig :http-options (Some http)
+  js-await $ sdk/models-get! client |model-name (Some cfg)
+```
+
+类型化配置支持 `base-url`、`base-url-resource-scope`、`api-version`、字符串 `headers`、`timeout`、`extra-body` 和 `retry-options`。可选的资源范围使用 `HttpResourceScope :collection`；`extra-body` 是字符串键的开放 Map，其值仍由 SDK 解释。`None` 不写入 JSON，显式的零值会保留。原有开放的 `http-options` 用法保持可用。
+
 ### 客户端、计数与历史
 
 ```cirru

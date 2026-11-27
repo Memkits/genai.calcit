@@ -394,6 +394,15 @@
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
+        'HttpResourceScope $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defenum HttpResourceScope (:collection)
+          :examples $ []
+          :schema $ quote EnumDef
+        'HttpRetryOptions $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct HttpRetryOptions
+            :attempts $ Option Number
+          :examples $ []
+          :schema $ quote StructDef
         'ImageContent $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ImageContent
             :data $ Option String
@@ -536,6 +545,17 @@
           :code $ quote $ defstruct Turn
             :role $ Option String
             :content Dynamic
+          :examples $ []
+          :schema $ quote StructDef
+        'TypedHttpOptions $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct TypedHttpOptions
+            :base-url $ Option String
+            :base-url-resource-scope $ Option HttpResourceScope
+            :api-version $ Option String
+            :headers $ Option $ Map String String
+            :timeout $ Option Number
+            :extra-body $ Option $ Map String Dynamic
+            :retry-options $ Option HttpRetryOptions
           :examples $ []
           :schema $ quote StructDef
         'UploadFile $ %{} 'CodeEntry (:doc |)
@@ -1225,6 +1245,26 @@
           :examples $ []
           :schema $ quote $ Fn String
             -> $ Map Tag String
+        'typed-http-options->js $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn typed-http-options->js (options)
+            js-object
+              :baseUrl $ option->js $ :base-url options
+              :baseUrlResourceScope $ match (:base-url-resource-scope options)
+                (:some scope)
+                  match scope $
+                    :collection
+                    , |COLLECTION
+                (:none) js/undefined
+              :apiVersion $ option->js $ :api-version options
+              :headers $ option->js $ :headers options
+              :timeout $ option->js $ :timeout options
+              :extraBody $ option->js $ :extra-body options
+              :retryOptions $ match (:retry-options options)
+                (:some retry)
+                  js-object $ :attempts $ option->js (:attempts retry)
+                (:none) js/undefined
+          :examples $ []
+          :schema $ quote $ Fn TypedHttpOptions (-> JsObject) (:features :js-ffi)
         'upload-file-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn upload-file-config->js (cfg)
             js-object
@@ -1331,6 +1371,30 @@
                     , false
                   fn (error) true
               assert= true rejected
+            assert=
+              {} $ :httpOptions $ {} (:baseUrl |https://example.invalid) (:baseUrlResourceScope |COLLECTION) (:apiVersion |v1) (:timeout 0)
+                :headers $ {} $ :x-example |value
+                :extraBody $ {} $ :seed 7
+                :retryOptions $ {} $ :attempts 0
+              match
+                try-parse-json $ js-ffi.contract/expect-string |http-options-json $ js/JSON.stringify
+                  genai.sdk/request-config->js $ genai.sdk/RequestConfig :http-options $ Some
+                    genai.sdk/typed-http-options->js $ genai.sdk/TypedHttpOptions :base-url (Some |https://example.invalid) :base-url-resource-scope
+                      Some $ genai.sdk/HttpResourceScope :collection
+                      , :api-version (Some |v1) :headers
+                        Some $ {} $ |x-example |value
+                        , :timeout (Some 0) :extra-body
+                          Some $ {} $ |seed 7
+                          , :retry-options $ Some
+                            genai.sdk/HttpRetryOptions :attempts $ Some 0
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert= ({})
+              match
+                try-parse-json $ js-ffi.contract/expect-string |empty-http-options-json $ js/JSON.stringify
+                  genai.sdk/typed-http-options->js $ genai.sdk/TypedHttpOptions
+                (:ok payload) payload
+                (:err message) (raise message)
             , &unit
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi)
