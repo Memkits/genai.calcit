@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { HttpResponse } from "@google/genai";
 import * as core from "../js-out/calcit.core.mjs";
-import { normalize_count_tokens } from "../js-out/genai.sdk.mjs";
+import { models_count_tokens_$x_, normalize_count_tokens } from "../js-out/genai.sdk.mjs";
 import { response_json } from "../js-out/js-ffi.shared.mjs";
 
 const field = (value, name) => value.nthAt(value.fields.findIndex((tag) => tag.value === name), core.newTag(name));
@@ -43,4 +43,13 @@ const stringKeys = core._$n__$M_(core.newTag("sdkHttpResponse"), core._$n__$M_("
 const normalizedLegacy = some(field(normalize_count_tokens(stringKeys), "sdkHttpResponse"));
 assert.equal(normalizedLegacy.tag.value, "legacy");
 assert.equal(core._$n__$e_(normalizedLegacy.extra[0], core._$n__$M_(core.newTag("future"), 42)), true);
+const none = core._PCT__$o__$o_(core.Option, core.newTag("none"));
+let request;
+const client = { models: { async countTokens(value) { request = value; return { totalTokens: 7, sdkHttpResponse: original }; } } };
+const counted = await models_count_tokens_$x_(client, "fixture-model", "hello", none);
+assert.equal(request.model, "fixture-model");
+assert.equal(request.contents, "hello");
+assert.equal(some(field(counted, "totalTokens")), 7);
+assert.equal(some(field(counted, "sdkHttpResponse")).extra[0], original);
+await assert.rejects(models_count_tokens_$x_({ models: { countTokens: () => Promise.reject(new Error("count offline")) } }, "fixture-model", "hello", none), /count offline/);
 console.log("CountTokens HTTP response and legacy map passed");

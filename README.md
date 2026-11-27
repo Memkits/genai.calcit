@@ -128,6 +128,8 @@ systemInstruction 序列化到 SDK 的 config 内，而不是请求顶层。
 
 ### 客户端、计数与历史
 
+`models-count-tokens!` 和直接调用的 `ModelsHost.countTokens` 都需要等待异步结果；包装函数会将 SDK 响应归一化为 `CountTokensResponse`。
+
 ```cirru
 let
     client $ sdk/new-client-with-options $ sdk/ClientOptions :api-key (Option :some api-key)

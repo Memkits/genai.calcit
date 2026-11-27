@@ -483,7 +483,7 @@
             .generateContentStream $ Fn genai.sdk/ModelsHost JsObject (-> JsObject) (:async)
             .generateImages $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
             .computeTokens $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
-            .countTokens $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .countTokens $ Fn genai.sdk/ModelsHost JsObject (-> JsObject) (:async)
             .get $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
             .list $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
           :examples $ []
@@ -1010,7 +1010,7 @@
                 :contents $ maybe-to-js-data contents
                 :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> CountTokensResponse) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> CountTokensResponse) (:features :js-ffi) (:async)
         'models-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-get! (client model cfg)
             hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
