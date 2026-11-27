@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import * as core from "../js-out/calcit.core.mjs";
-import { chat_send_message_$x_, extract_text } from "../js-out/genai.sdk.mjs";
+import { chat_send_message_$x_, chat_send_message_stream_$x_, extract_text } from "../js-out/genai.sdk.mjs";
 
 const none = core._PCT__$o__$o_(core.Option, core.newTag("none"));
 const result = { candidates: [{ content: { parts: [{ text: "offline response" }] } }] };
@@ -16,4 +16,19 @@ await assert.rejects(
   chat_send_message_$x_({ sendMessage: () => Promise.reject(new Error("offline")) }, "hello", none),
   /offline/,
 );
-console.log("Chat response and rejection passed");
+const chunks = [{ text: "first" }, { text: "second" }];
+const generator = (async function* () { yield* chunks; })();
+let streamRequest;
+const stream = await chat_send_message_stream_$x_({
+  async sendMessageStream(value) { streamRequest = value; return generator; },
+}, "stream", none);
+assert.equal(streamRequest.message, "stream");
+assert.equal(stream, generator);
+const received = [];
+for await (const chunk of stream) received.push(chunk);
+assert.deepEqual(received, chunks);
+await assert.rejects(
+  chat_send_message_stream_$x_({ sendMessageStream: () => Promise.reject(new Error("stream offline")) }, "stream", none),
+  /stream offline/,
+);
+console.log("Chat responses, streaming and rejection passed");
