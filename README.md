@@ -153,7 +153,7 @@ let
 
 文件上传和读取需要 `js-await`，返回 `UploadedFileHost`，名称、MIME 类型、URI 和时间字段均为 `JsNullish String`；上传仍接受路径或 Blob，删除和列表保留 SDK 返回的宿主对象。直接调用 `FilesHost` 方法也需要等待。
 
-模型元数据及异构原生 SDK 返回值仍是有意保留的 FFI Dynamic 边界；
+其他未建模的异构原生 SDK 返回值仍保留 FFI Dynamic 边界；
 本次没有把未建模的服务响应伪装成 Struct。按需要在真实使用位置检查/解码。
 
 ## 结果合同
