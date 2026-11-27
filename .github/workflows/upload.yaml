@@ -64,6 +64,9 @@ jobs:
         yarn compile
         yarn compile:web
 
+    - name: Test cache response contracts
+      run: node scripts/test-cache-response.mjs
+
     - name: Select CDN asset prefix
       id: asset-path
       env:

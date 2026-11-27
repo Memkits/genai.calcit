@@ -229,12 +229,23 @@
             js-ffi.contract :as contract
     'genai.sdk $ %{} 'FileEntry
       :defs $ {}
+        'CachedContentHost $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ deftrait CachedContentHost
+            :name $ JsNullish String
+            :model $ JsNullish String
+            :displayName $ JsNullish String
+            :createTime $ JsNullish String
+            :updateTime $ JsNullish String
+            :expireTime $ JsNullish String
+          :examples $ []
+          :ffi $ {} (:backend :js) (:kind :external-object)
+          :schema $ quote Trait
         'CachesHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait CachesHost
-            .create $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
-            .delete $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
-            .get $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
-            .list $ Fn genai.sdk/CachesHost Dynamic $ -> Dynamic
+            .create $ Fn genai.sdk/CachesHost JsObject (-> genai.sdk/CachedContentHost) (:async)
+            .delete $ Fn genai.sdk/CachesHost JsObject (-> JsObject) (:async)
+            .get $ Fn genai.sdk/CachesHost JsObject (-> genai.sdk/CachedContentHost) (:async)
+            .list $ Fn genai.sdk/CachesHost (JsNullish JsObject) (-> JsObject) (:async)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
@@ -579,35 +590,35 @@
           :schema $ quote $ Fn CreateCachedContentConfig (-> JsObject) (:features :js-ffi)
         'caches-create! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-create! (client model cfg)
-            hint-fn $ Fn GoogleClientHost String (Option CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi) (:async)
-            .create (.-caches client)
+            hint-fn $ Fn GoogleClientHost String (Option CreateCachedContentConfig) (-> CachedContentHost) (:features :js-ffi) (:async)
+            js-await $ .create (.-caches client)
               js-object (:model model)
                 :config $ option-map->js cfg cached-content-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost String (Option CreateCachedContentConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option CreateCachedContentConfig) (-> CachedContentHost) (:features :js-ffi) (:async)
         'caches-delete! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-delete! (client name cfg)
-            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
-            .delete (.-caches client)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> JsObject) (:features :js-ffi) (:async)
+            js-await $ .delete (.-caches client)
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> JsObject) (:features :js-ffi) (:async)
         'caches-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-get! (client name cfg)
-            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
-            .get (.-caches client)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> CachedContentHost) (:features :js-ffi) (:async)
+            js-await $ .get (.-caches client)
               js-object (:name name)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> CachedContentHost) (:features :js-ffi) (:async)
         'caches-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn caches-list! (client cfg)
-            hint-fn $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi) (:async)
-            .list (.-caches client)
+            hint-fn $ Fn GoogleClientHost (Option ListParams) (-> JsObject) (:features :js-ffi) (:async)
+            js-await $ .list (.-caches client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> JsObject) (:features :js-ffi) (:async)
         'chat-get-history $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-get-history (chat)
             decode-map-as
