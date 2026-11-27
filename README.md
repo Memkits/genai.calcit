@@ -130,6 +130,8 @@ systemInstruction 序列化到 SDK 的 config 内，而不是请求顶层。
 
 `models-count-tokens!` 和直接调用的 `ModelsHost.countTokens` 都需要等待异步结果；包装函数会将 SDK 响应归一化为 `CountTokensResponse`。
 
+交互创建、读取、取消和删除同样返回异步结果；直接调用 `InteractionsHost` 方法也必须等待。删除响应在 SDK 中为未知类型，仍保留开放合同。
+
 ```cirru
 let
     client $ sdk/new-client-with-options $ sdk/ClientOptions :api-key (Option :some api-key)
