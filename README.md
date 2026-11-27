@@ -173,4 +173,6 @@ COS 使用 action 1.2.0 自带 public-base-url verify，无额外上传验证脚
 PR 预览按编号/run/attempt 隔离；fork PR 构建但不上传；只有 main push 才执行生产 rsync。
 未经授权不合并 Demo 或业务应用；离线测试不代表真实 Google 服务验收。
 
+`normalize-modality-lists` 现在返回受检的 `SdkUsage` 结构，而不是开放 Map；直接调用该辅助函数的代码需要改用结构字段访问。无效字段会在该函数内解码时报错，模块用量条目中的 `extra` 仍保留未知字段。
+
 MIT

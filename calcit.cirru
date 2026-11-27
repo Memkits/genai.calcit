@@ -1114,16 +1114,17 @@
           :schema $ quote $ Fn Input (-> ModalityTokenUsage) (:generics Input)
         'normalize-modality-lists $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-modality-lists (usage)
-            .fold ([] :input_tokens_by_modality :cached_tokens_by_modality :output_tokens_by_modality :tool_use_tokens_by_modality) usage $ fn (acc key)
-              match (get acc key)
-                (:none) acc
-                (:some value)
-                  assoc acc key $ .map
-                    decode-map-as value $ List Dynamic
-                    , normalize-modality-entry
+            decode-map-as
+              .fold ([] :input_tokens_by_modality :cached_tokens_by_modality :output_tokens_by_modality :tool_use_tokens_by_modality) usage $ fn (acc key)
+                match (get acc key)
+                  (:none) acc
+                  (:some value)
+                    assoc acc key $ .map
+                      decode-map-as value $ List Dynamic
+                      , normalize-modality-entry
+              , 'genai.sdk/SdkUsage
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic)
-            -> $ Map Tag Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) (-> SdkUsage)
         'option->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn option->js (value)
             match value
