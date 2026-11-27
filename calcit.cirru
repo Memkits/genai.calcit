@@ -477,15 +477,26 @@
             :extra $ Map Tag Dynamic
           :examples $ []
           :schema $ quote StructDef
+        'ModelInfoHost $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ deftrait ModelInfoHost
+            :name $ JsNullish String
+            :displayName $ JsNullish String
+            :description $ JsNullish String
+            :version $ JsNullish String
+            :inputTokenLimit $ JsNullish Number
+            :outputTokenLimit $ JsNullish Number
+          :examples $ []
+          :ffi $ {} (:backend :js) (:kind :external-object)
+          :schema $ quote Trait
         'ModelsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ModelsHost
             .generateContent $ Fn genai.sdk/ModelsHost JsObject (-> genai.sdk/GenerateResponseHost) (:async)
             .generateContentStream $ Fn genai.sdk/ModelsHost JsObject (-> JsObject) (:async)
-            .generateImages $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
-            .computeTokens $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .generateImages $ Fn genai.sdk/ModelsHost JsObject (-> JsObject) (:async)
+            .computeTokens $ Fn genai.sdk/ModelsHost JsObject (-> JsObject) (:async)
             .countTokens $ Fn genai.sdk/ModelsHost JsObject (-> JsObject) (:async)
-            .get $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
-            .list $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .get $ Fn genai.sdk/ModelsHost JsObject (-> genai.sdk/ModelInfoHost) (:async)
+            .list $ Fn genai.sdk/ModelsHost (JsNullish JsObject) (-> JsObject) (:async)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
@@ -853,7 +864,7 @@
                     :httpOptions $ option->js http-opts
                     :abortSignal $ option->js signal
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost ImageGenConfig (-> JsObject) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost ImageGenConfig (-> JsObject) (:features :js-ffi) (:async)
         'generation-config->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn generation-config->js (cfg)
             js-object
@@ -995,13 +1006,13 @@
             :features :js-ffi
         'models-compute-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-compute-tokens! (client model contents config)
-            hint-fn $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
-            .computeTokens (.-models client)
+            hint-fn $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> JsObject) (:features :js-ffi) (:async)
+            js-await $ .computeTokens (.-models client)
               js-object (:model model)
                 :contents $ maybe-to-js-data contents
                 :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> JsObject) (:features :js-ffi) (:async)
         'models-count-tokens! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-count-tokens! (client model contents config)
             hint-fn $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> CountTokensResponse) (:features :js-ffi) (:async)
@@ -1013,19 +1024,19 @@
           :schema $ quote $ Fn GoogleClientHost String Dynamic (Option GenerationConfig) (-> CountTokensResponse) (:features :js-ffi) (:async)
         'models-get! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-get! (client model cfg)
-            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi) (:async)
-            .get (.-models client)
+            hint-fn $ Fn GoogleClientHost String (Option RequestConfig) (-> ModelInfoHost) (:features :js-ffi) (:async)
+            js-await $ .get (.-models client)
               js-object (:model model)
                 :config $ option-map->js cfg request-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost String (Option RequestConfig) (-> ModelInfoHost) (:features :js-ffi) (:async)
         'models-list! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn models-list! (client cfg)
-            hint-fn $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi) (:async)
-            .list (.-models client)
+            hint-fn $ Fn GoogleClientHost (Option ListParams) (-> JsObject) (:features :js-ffi) (:async)
+            js-await $ .list (.-models client)
               js-object $ :config $ option-map->js cfg list-config->js
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost (Option ListParams) (-> JsObject) (:features :js-ffi) (:async)
         'new-client $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn new-client (api-key)
             unsafe-coerce
