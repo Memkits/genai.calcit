@@ -59,7 +59,7 @@
           :code $ quote $ defn browser-api-key ()
             let
                 key |GEMINI_API_KEY
-                window-host $ unsafe-coerce js/window JsObject
+                window-host $ contract/expect-object |window js/window
                 raw $ js-get window-host key
               if (js-nullish? raw) None $ Some $ js-ffi.contract/expect-string |GEMINI_API_KEY raw
           :examples $ []
@@ -113,7 +113,7 @@
                   input-target $ js-cast target 'genai.main/FileInputTargetHost
                   files $ input-target :files
                 if (js-nullish? files) None $ let
-                    list-object $ unsafe-coerce files JsObject
+                    list-object $ contract/expect-object |input.files files
                     index 0
                     file $ js-get list-object index
                   if (js-nullish? file) None $ Some $ js-cast file 'genai.main/BrowserFileHost
