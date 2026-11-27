@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import * as core from "../js-out/calcit.core.mjs";
+import { ContentConfig, generate_content_$x_, generate_content_stream_$x_, extract_text } from "../js-out/genai.sdk.mjs";
+
+const some = (value) => { assert.equal(value.tag.value, "some"); return value.extra[0]; };
+const none = core._PCT__$o__$o_(core.Option, core.newTag("none"));
+const fields = ["system-instruction", "thinking-config", "tools", "tool-config", "response-modalities", "response-mime-type", "cached-content", "abort-signal", "http-options"];
+const config = core._$n__PCT__$M_(ContentConfig, core.newTag("model"), "fixture", core.newTag("contents"), "hello", ...fields.flatMap((name) => [core.newTag(name), none]));
+const result = { candidates: [{ content: { parts: [{ text: "offline model" }] } }] };
+let request;
+const model = { async generateContent(value) { request = value; return result; } };
+assert.equal(await generate_content_$x_({ models: model }, config), result);
+assert.equal(request.model, "fixture");
+assert.equal(request.contents, "hello");
+assert.equal(some(extract_text(result)), "offline model");
+const chunks = [{ text: "first" }, { text: "second" }];
+const generator = (async function* () { yield* chunks; })();
+const stream = await generate_content_stream_$x_({ models: { async generateContentStream() { return generator; } } }, config);
+assert.equal(stream, generator);
+const received = [];
+for await (const chunk of stream) received.push(chunk);
+assert.deepEqual(received, chunks);
+await assert.rejects(generate_content_$x_({ models: { generateContent: () => Promise.reject(new Error("model offline")) } }, config), /model offline/);
+await assert.rejects(generate_content_stream_$x_({ models: { generateContentStream: () => Promise.reject(new Error("stream offline")) } }, config), /stream offline/);
+console.log("Model generation, streaming and rejection passed");

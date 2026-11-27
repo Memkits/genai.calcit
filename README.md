@@ -120,10 +120,11 @@ js-await $ sdk/interactions-delete! client interaction-id
 ### 内容请求与工具
 
 ```cirru
-sdk/generate-content! client $ sdk/ContentConfig :model |gemini-2.5-flash :contents |hello :system-instruction (Option :some |system) :tools $ sdk/make-search-tools true false
+js-await $ sdk/generate-content! client $ sdk/ContentConfig :model |gemini-2.5-flash :contents |hello :system-instruction (Option :some |system) :tools $ sdk/make-search-tools true false
 ```
 
 systemInstruction 序列化到 SDK 的 config 内，而不是请求顶层。
+两个生成接口都返回 Promise，需要 `js-await`；普通结果为 `GenerateResponseHost`，流式结果为 SDK 异步迭代器的 `JsObject`。直接调用 `ModelsHost` 方法也需要等待。
 
 ### 客户端、计数与历史
 

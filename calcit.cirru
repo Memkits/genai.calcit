@@ -479,8 +479,8 @@
           :schema $ quote StructDef
         'ModelsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ModelsHost
-            .generateContent $ Fn genai.sdk/ModelsHost JsObject $ -> genai.sdk/GenerateResponseHost
-            .generateContentStream $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
+            .generateContent $ Fn genai.sdk/ModelsHost JsObject (-> genai.sdk/GenerateResponseHost) (:async)
+            .generateContentStream $ Fn genai.sdk/ModelsHost JsObject (-> JsObject) (:async)
             .generateImages $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
             .computeTokens $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
             .countTokens $ Fn genai.sdk/ModelsHost JsObject $ -> Dynamic
@@ -825,16 +825,16 @@
           :doc "|async, calls models.generateContent with ContentConfig, returns full response (non-streaming)"
           :code $ quote $ defn generate-content! (client cfg)
             hint-fn $ Fn GoogleClientHost ContentConfig (-> GenerateResponseHost) (:features :js-ffi) (:async)
-            .generateContent (.-models client) (content-config->js cfg)
+            js-await $ .generateContent (.-models client) (content-config->js cfg)
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost ContentConfig (-> GenerateResponseHost) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost ContentConfig (-> GenerateResponseHost) (:features :js-ffi) (:async)
         'generate-content-stream! $ %{} 'CodeEntry
           :doc "|async, calls models.generateContentStream with ContentConfig, returns stream for js-for-await"
           :code $ quote $ defn generate-content-stream! (client cfg)
-            hint-fn $ Fn GoogleClientHost ContentConfig (-> Dynamic) (:features :js-ffi) (:async)
-            .generateContentStream (.-models client) (content-config->js cfg)
+            hint-fn $ Fn GoogleClientHost ContentConfig (-> JsObject) (:features :js-ffi) (:async)
+            js-await $ .generateContentStream (.-models client) (content-config->js cfg)
           :examples $ []
-          :schema $ quote $ Fn GoogleClientHost ContentConfig (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn GoogleClientHost ContentConfig (-> JsObject) (:features :js-ffi) (:async)
         'generate-images! $ %{} 'CodeEntry
           :doc "|async, calls models.generateImages with ImageGenConfig, returns image generation response"
           :code $ quote $ defn generate-images! (client cfg)
