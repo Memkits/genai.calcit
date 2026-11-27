@@ -422,9 +422,9 @@
         'InteractionOutputHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait InteractionOutputHost (:type 'String)
             :text $ JsNullish String
-            :name 'String
-            :arguments 'JsObject
-            :id 'String
+            :name $ JsNullish String
+            :arguments $ JsNullish JsObject
+            :id $ JsNullish String
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
