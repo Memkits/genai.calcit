@@ -264,7 +264,7 @@
           :schema $ quote UnionDef
         'ChatsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ChatsHost
-            .create $ Fn genai.sdk/ChatsHost Dynamic $ -> genai.sdk/ChatHost
+            .create $ Fn genai.sdk/ChatsHost JsObject $ -> genai.sdk/ChatHost
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait

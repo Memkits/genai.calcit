@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import * as core from "../js-out/calcit.core.mjs";
-import { chat_send_message_$x_, chat_send_message_stream_$x_, extract_text } from "../js-out/genai.sdk.mjs";
+import { chats_create, chat_send_message_$x_, chat_send_message_stream_$x_, extract_text } from "../js-out/genai.sdk.mjs";
 
 const none = core._PCT__$o__$o_(core.Option, core.newTag("none"));
+let createRequest;
+const created = { name: "offline chat" };
+const client = { chats: { create(value) { createRequest = value; return created; } } };
+assert.equal(chats_create(client, "fixture-model", none, none), created);
+assert.equal(createRequest.model, "fixture-model");
 const result = { candidates: [{ content: { parts: [{ text: "offline response" }] } }] };
 let request;
 const chat = { async sendMessage(value) { request = value; return result; } };

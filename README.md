@@ -5,6 +5,7 @@
 ## 使用者影响
 
 `chat-send-message!` 等待 SDK 异步响应后返回 `GenerateResponseHost`；调用方应继续使用 `js-await`，可直接交给 `extract-text`。直接调用 `ChatHost.sendMessage` 时同样需要等待结果；消息输入仍保持原有开放合同。
+直接调用 `ChatsHost.create` 时请传入 SDK 请求对象（`JsObject`）；`chats-create` 的调用方式不变。
 
 `chat-send-message-stream!` 同样需要 `js-await`；结果为 SDK 返回的异步迭代器宿主对象（`JsObject`），迭代过程中得到的分块仍由 SDK 决定。请求失败继续通过 Promise 拒绝传递。
 
