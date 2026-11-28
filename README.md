@@ -131,6 +131,17 @@ js-await $ sdk/generate-content! client $ sdk/ContentConfig :model |gemini-2.5-f
 systemInstruction 序列化到 SDK 的 config 内，而不是请求顶层。
 两个生成接口都返回 Promise，需要 `js-await`；普通结果为 `GenerateResponseHost`，流式结果为 SDK 异步迭代器的 `JsObject`。直接调用 `ModelsHost` 方法也需要等待。
 
+HTTP 配置也可以选择受类型检查的构造方式，再传入现有配置入口：
+
+```cirru
+let
+    http $ sdk/typed-http-options->js $ sdk/TypedHttpOptions :base-url (Some |https://example.invalid) :timeout (Some 0) :retry-options $ Some $ sdk/HttpRetryOptions :attempts (Some 1)
+    cfg $ sdk/RequestConfig :http-options (Some http)
+  js-await $ sdk/models-get! client |model-name (Some cfg)
+```
+
+类型化配置支持 `base-url`、`base-url-resource-scope`、`api-version`、字符串 `headers`、`timeout`、`extra-body` 和 `retry-options`。可选的资源范围使用 `HttpResourceScope :collection`；`extra-body` 是字符串键的开放 Map，其值仍由 SDK 解释。`None` 不写入 JSON，显式的零值会保留。原有开放的 `http-options` 用法保持可用。
+
 ### 客户端、计数与历史
 
 `models-count-tokens!` 和直接调用的 `ModelsHost.countTokens` 都需要等待异步结果；包装函数会将 SDK 响应归一化为 `CountTokensResponse`。模型读取返回 `ModelInfoHost`，其名称、描述、版本和 token 上限字段均可缺失；模型列表返回 SDK 分页器，token 计算及图片生成返回宿主对象，均需等待。
