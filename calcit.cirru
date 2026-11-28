@@ -746,8 +746,10 @@
                     (:missing) None
                     (:shape message) (raise message)
                 (:ok value)
-                  if (nil? value) None $ Some $ decode-map-as value
-                    List $ Map Tag Dynamic
+                  match (nil->option value)
+                    (:none) None
+                    (:some parts)
+                      Some $ decode-map-as parts $ List (Map Tag Dynamic)
           :examples $ []
           :schema $ quote $ Fn Dynamic
             -> $ Option $ List (Map Tag Dynamic)
@@ -766,7 +768,10 @@
                     (:missing) None
                     (:shape message) (raise message)
                 (:ok value)
-                  if (nil? value) None $ Some $ decode-map-as value 'String
+                  match (nil->option value)
+                    (:none) None
+                    (:some bytes)
+                      Some $ decode-map-as bytes 'String
           :examples $ []
           :schema $ quote $ Fn JsObject
             -> $ Option String
@@ -808,14 +813,19 @@
                       (:missing) None
                       (:shape message) (raise message)
                   (:ok value)
-                    if (nil? value) None $ Some $ decode-map-as value (Map Tag Dynamic)
+                    match (nil->option value)
+                      (:none) None
+                      (:some row)
+                        Some $ decode-map-as row $ Map Tag Dynamic
                 thinking? $ match part
                   (:none) false
                   (:some row)
                     match (get row :thought)
                       (:none) false
                       (:some value)
-                        if (nil? value) false $ decode-map-as value 'Bool
+                        match (nil->option value)
+                          (:none) false
+                          (:some flag) (decode-map-as flag 'Bool)
                 text $ match part
                   (:none)
                     js-nullish->option $ .-text chunk
@@ -826,9 +836,12 @@
                     match (get data :promptFeedback)
                       (:none) None
                       (:some feedback)
-                        if (nil? feedback) None $ read-string-field
-                          decode-map-as feedback $ Map Tag Dynamic
-                          , :blockReason
+                        match (nil->option feedback)
+                          (:none) None
+                          (:some raw)
+                            read-string-field
+                              decode-map-as raw $ Map Tag Dynamic
+                              , :blockReason
               StreamChunkOutput :text fallback :thinking? thinking?
           :examples $ []
           :schema $ quote $ Fn GenerateResponseHost (-> StreamChunkOutput) (:features :js-ffi)
@@ -936,16 +949,23 @@
             -> $ Map Tag $ Map Tag String
         'input->js $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn input->js (v)
-            if (string? v)
-              js-array $ js-object (:type |text) (:text v)
-              if (list? v) (to-js-data v)
-                if (map? v)
-                  if (contains? v :type) (to-js-data v)
-                    if (contains? v :content)
-                      js-array $ js-object (:type |text)
-                        :text $ .unwrap $ get v :content
-                      to-js-data v
-                  identity v
+            match (try-decode-map-as v 'String)
+              (:ok text)
+                js-array $ js-object (:type |text) (:text text)
+              (:err _)
+                match
+                  try-decode-map-as v $ List Dynamic
+                  (:ok xs) (to-js-data xs)
+                  (:err _)
+                    match
+                      try-decode-map-as v $ Map Dynamic Dynamic
+                      (:ok m)
+                        if (contains? m :type) (to-js-data m)
+                          match (get m :content)
+                            (:some content)
+                              js-array $ js-object (:type |text) (:text content)
+                            (:none) (to-js-data m)
+                      (:err _) v
           :examples $ []
           :schema $ quote $ Fn T (-> Dynamic) (:generics T) (:features :js-ffi)
         'interactions-cancel! $ %{} 'CodeEntry (:doc |)
@@ -1022,10 +1042,14 @@
           :schema $ quote $ Fn Number Bool (-> JsObject) (:features :js-ffi)
         'maybe-to-js-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn maybe-to-js-data (x)
-            if
-              or (list? x) (map? x)
-              to-js-data x
-              , x
+            match
+              try-decode-map-as x $ List Dynamic
+              (:ok xs) (to-js-data xs)
+              (:err _)
+                match
+                  try-decode-map-as x $ Map Dynamic Dynamic
+                  (:ok m) (to-js-data m)
+                  (:err _) x
           :examples $ []
           :schema $ quote $ Fn T (-> Dynamic) (:generics T) (:features :js-ffi)
         'messages->contents $ %{} 'CodeEntry
@@ -1110,32 +1134,40 @@
           :schema $ quote $ Fn ClientOptions (-> GoogleClientHost) (:features :js-ffi)
         'normalize-count-tokens $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-count-tokens (value)
-            if (map? value)
-              let
-                  data $ decode-map-as
-                    tagging-edn $ to-calcit-data value true
-                    Map Tag Dynamic
-                  total $ get data :totalTokens
-                  http $ get data :sdkHttpResponse
-                CountTokensResponse :totalTokens
-                  match total
-                    (:none) None
-                    (:some raw)
-                      if (nil? raw) None $ Some $ decode-map-as raw 'Number
-                  , :sdkHttpResponse $ match http
-                    (:none) None
-                    (:some raw)
-                      if (nil? raw) None $ Some $ CountTokensHttpResponse :legacy
-                        decode-map-as raw $ Map Tag Dynamic
-              let
-                  raw-total $ js-ffi.contract/object-field |CountTokensResponse value |totalTokens
-                  raw-http $ js-ffi.contract/object-field |CountTokensResponse value |sdkHttpResponse
-                CountTokensResponse :totalTokens
-                  if (js-nullish? raw-total) None $ Some $ js-ffi.contract/expect-number |CountTokensResponse.totalTokens raw-total
-                  , :sdkHttpResponse $ if (js-nullish? raw-http) None $ let
-                      wrapper $ js-ffi.contract/expect-object |CountTokensResponse.sdkHttpResponse raw-http
-                      response $ host/response-host $ js-ffi.contract/object-field |HttpResponse wrapper |responseInternal
-                    Some $ CountTokensHttpResponse :host wrapper response
+            match
+              try-decode-map-as value $ Map Dynamic Dynamic
+              (:ok map-val)
+                let
+                    data $ decode-map-as
+                      tagging-edn $ to-calcit-data map-val true
+                      Map Tag Dynamic
+                    total $ get data :totalTokens
+                    http $ get data :sdkHttpResponse
+                  CountTokensResponse :totalTokens
+                    match total
+                      (:none) None
+                      (:some raw)
+                        match (nil->option raw)
+                          (:none) None
+                          (:some present)
+                            Some $ decode-map-as present 'Number
+                    , :sdkHttpResponse $ match http
+                      (:none) None
+                      (:some raw)
+                        match (nil->option raw)
+                          (:none) None
+                          (:some present)
+                            Some $ CountTokensHttpResponse :legacy $ decode-map-as present (Map Tag Dynamic)
+              (:err _)
+                let
+                    raw-total $ js-ffi.contract/object-field |CountTokensResponse value |totalTokens
+                    raw-http $ js-ffi.contract/object-field |CountTokensResponse value |sdkHttpResponse
+                  CountTokensResponse :totalTokens
+                    if (js-nullish? raw-total) None $ Some $ js-ffi.contract/expect-number |CountTokensResponse.totalTokens raw-total
+                    , :sdkHttpResponse $ if (js-nullish? raw-http) None $ let
+                        wrapper $ js-ffi.contract/expect-object |CountTokensResponse.sdkHttpResponse raw-http
+                        response $ host/response-host $ js-ffi.contract/object-field |HttpResponse wrapper |responseInternal
+                      Some $ CountTokensHttpResponse :host wrapper response
           :examples $ []
           :schema $ quote $ Fn Dynamic (-> CountTokensResponse) (:features :js-ffi)
         'normalize-interaction $ %{} 'CodeEntry (:doc |)
@@ -1248,7 +1280,10 @@
             match (get data field)
               (:none) None
               (:some value)
-                if (nil? value) None $ Some $ decode-map-as value 'String
+                match (nil->option value)
+                  (:none) None
+                  (:some text)
+                    Some $ decode-map-as text 'String
           :examples $ []
           :schema $ quote $ Fn (Map Tag V) Tag
             -> $ Option String
@@ -1268,7 +1303,9 @@
                 match (get data field)
                   (:none) acc
                   (:some value)
-                    if (nil? value) acc $ assoc acc field value
+                    match (nil->option value)
+                      (:none) acc
+                      (:some present) (assoc acc field present)
           :examples $ []
           :schema $ quote $ Fn (Map Tag V) (List Tag)
             -> $ Map Tag V
@@ -1427,6 +1464,95 @@
               match
                 try-parse-json $ js-ffi.contract/expect-string |empty-http-options-json $ js/JSON.stringify
                   genai.sdk/typed-http-options->js $ genai.sdk/TypedHttpOptions
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert= None $ genai.sdk/extract-content-parts $ js-object
+              :candidates $ js-array $ js-object
+                :content $ js-object $ :parts nil
+            assert= None $ genai.sdk/extract-image-bytes $ js-object
+              :generatedImages $ js-array $ js-object
+                :image $ js-object $ :imageBytes nil
+            assert= None $ genai.sdk/read-string-field
+              decode-map-as
+                {} $ :text nil
+                Map Tag Dynamic
+              , :text
+            assert= (Some |ok)
+              genai.sdk/read-string-field
+                decode-map-as
+                  {} $ :text |ok
+                  Map Tag Dynamic
+                , :text
+            assert=
+              {} $ :a 1
+              genai.sdk/select-present-fields
+                decode-map-as
+                  {} (:a 1) (:b nil)
+                  Map Tag Dynamic
+                [] :a :b :c
+            let
+                counted-nil $ genai.sdk/normalize-count-tokens $ {} (:totalTokens nil) (:sdkHttpResponse nil)
+              assert= None $ :totalTokens counted-nil
+              assert= None $ :sdkHttpResponse counted-nil
+            assert=
+              [] $ {} (:type |text) (:text |hi)
+              match
+                try-parse-json $ js-ffi.contract/expect-string |input-str-json $ js/JSON.stringify (genai.sdk/input->js |hi)
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert= ([] |a |b)
+              match
+                try-parse-json $ js-ffi.contract/expect-string |input-list-json $ js/JSON.stringify
+                  genai.sdk/input->js $ [] |a |b
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert=
+              {} (:type |image) (:data |x)
+              match
+                try-parse-json $ js-ffi.contract/expect-string |input-type-map-json $ js/JSON.stringify
+                  genai.sdk/input->js $ {} (:type |image) (:data |x)
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert=
+              [] $ {} (:type |text) (:text |hello-map)
+              match
+                try-parse-json $ js-ffi.contract/expect-string |input-content-map-json $ js/JSON.stringify
+                  genai.sdk/input->js $ {} $ :content |hello-map
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert=
+              {} $ :foo |bar
+              match
+                try-parse-json $ js-ffi.contract/expect-string |input-plain-map-json $ js/JSON.stringify
+                  genai.sdk/input->js $ {} $ :foo |bar
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert=
+              {} $ :raw true
+              match
+                try-parse-json $ js-ffi.contract/expect-string |input-js-json $ js/JSON.stringify
+                  genai.sdk/input->js $ js-object $ :raw true
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert= ([] 1 2)
+              match
+                try-parse-json $ js-ffi.contract/expect-string |maybe-list-json $ js/JSON.stringify
+                  genai.sdk/maybe-to-js-data $ [] 1 2
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert=
+              {} $ :k |v
+              match
+                try-parse-json $ js-ffi.contract/expect-string |maybe-map-json $ js/JSON.stringify
+                  genai.sdk/maybe-to-js-data $ {} $ :k |v
+                (:ok payload) payload
+                (:err message) (raise message)
+            assert= |scalar $ genai.sdk/maybe-to-js-data |scalar
+            assert=
+              {} $ :ok true
+              match
+                try-parse-json $ js-ffi.contract/expect-string |maybe-js-json $ js/JSON.stringify
+                  genai.sdk/maybe-to-js-data $ js-object $ :ok true
                 (:ok payload) payload
                 (:err message) (raise message)
             , &unit

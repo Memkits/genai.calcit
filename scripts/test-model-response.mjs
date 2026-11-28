@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import * as core from "../js-out/calcit.core.mjs";
-import { ContentConfig, CreateParams, ImageGenConfig, generate_content_$x_, generate_content_stream_$x_, generate_images_$x_, models_compute_tokens_$x_, models_get_$x_, models_list_$x_, extract_text, interactions_create_$x_, interactions_get_$x_, interactions_cancel_$x_, interactions_delete_$x_ } from "../js-out/genai.sdk.mjs";
+import { ContentConfig, CreateParams, ImageGenConfig, generate_content_$x_, generate_content_stream_$x_, generate_images_$x_, models_compute_tokens_$x_, models_get_$x_, models_list_$x_, extract_text, extract_stream_chunk, interactions_create_$x_, interactions_get_$x_, interactions_cancel_$x_, interactions_delete_$x_ } from "../js-out/genai.sdk.mjs";
 
 const some = (value) => { assert.equal(value.tag.value, "some"); return value.extra[0]; };
 const none = core._PCT__$o__$o_(core.Option, core.newTag("none"));
@@ -75,4 +75,11 @@ await assert.rejects(interactions_create_$x_({ interactions: { create: () => Pro
 await assert.rejects(interactions_get_$x_({ interactions: { get: () => Promise.reject(new Error("get offline")) } }, "offline-id"), /get offline/);
 await assert.rejects(interactions_cancel_$x_({ interactions: { cancel: () => Promise.reject(new Error("cancel offline")) } }, "offline-id"), /cancel offline/);
 await assert.rejects(interactions_delete_$x_({ interactions: { delete: () => Promise.reject(new Error("delete offline")) } }, "offline-id"), /delete offline/);
+const chunkTextField = (chunk) => getField(extract_stream_chunk(chunk), "text");
+const chunkThinkingField = (chunk) => getField(extract_stream_chunk(chunk), "thinking?");
+assert.equal(some(chunkTextField({ candidates: [{ content: { parts: [{ text: "thought", thought: true }] } }] })), "thought");
+assert.equal(chunkThinkingField({ candidates: [{ content: { parts: [{ text: "thought", thought: true }] } }] }), true);
+assert.equal(chunkTextField({ candidates: [{ content: { parts: [null] } }], promptFeedback: null }).tag.value, "none");
+assert.equal(chunkThinkingField({ candidates: [{ content: { parts: [{ text: "x", thought: null }] } }] }), false);
+assert.equal(some(chunkTextField({ promptFeedback: { blockReason: "SAFETY" } })), "SAFETY");
 console.log("Model and interaction async responses passed");
