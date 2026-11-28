@@ -13,8 +13,8 @@
 
 候选 0.0.5 将 `SdkUsage` 四类 `*_tokens_by_modality` 列表的条目从开放值改为 `ModalityTokenUsage`：`modality` 为 `Option String`、`tokens` 为 `Option Number`，原先从 Map 读取这两项的调用方需要改用结构字段。SDK 返回的其他条目字段保留在 `:extra` Map；已知字段类型错误会在解码时报告。
 
-CLI / `@calcit/procs` 配对正式 **0.46.0**，升级后需重新安装整张依赖图、生成
-Node/Web 产物并刷新。使用已发布 Respo **0.20.0**、UI **0.16.6**、JS-FFI
+CLI / `@calcit/procs` 配对正式 **0.47.1**，升级后需重新安装整张依赖图、生成
+Node/Web 产物并刷新。使用已发布 Respo **0.20.1**、UI **0.16.7**、JS-FFI
 **0.2.26**，不依赖本地候选或未发布版本。停止序列和响应模态的配置字段现在接受 `Option (List String)`。
 请用字符串提供序列和模态，并沿用 SDK 对各接口的大小写要求。
 `files-upload!` 的文件参数现为 `UploadFile` 联合类型，接受字符串路径或 Blob 宿主对象；原先使用 Dynamic 的调用方需要先收窄类型。宿主对象类型不验证运行时 Blob 身份，实际上传仍由 SDK 校验。
