@@ -125,12 +125,17 @@ js-await $ sdk/interactions-delete! client interaction-id
 ### 内容请求与工具
 
 ```cirru
-sdk/generate-content! client $ sdk/ContentConfig :model |gemini-2.5-flash :contents |hello :system-instruction (Option :some |system) :tools $ sdk/make-search-tools true false
+js-await $ sdk/generate-content! client $ sdk/ContentConfig :model |gemini-2.5-flash :contents |hello :system-instruction (Option :some |system) :tools $ sdk/make-search-tools true false
 ```
 
 systemInstruction 序列化到 SDK 的 config 内，而不是请求顶层。
+两个生成接口都返回 Promise，需要 `js-await`；普通结果为 `GenerateResponseHost`，流式结果为 SDK 异步迭代器的 `JsObject`。直接调用 `ModelsHost` 方法也需要等待。
 
 ### 客户端、计数与历史
+
+`models-count-tokens!` 和直接调用的 `ModelsHost.countTokens` 都需要等待异步结果；包装函数会将 SDK 响应归一化为 `CountTokensResponse`。模型读取返回 `ModelInfoHost`，其名称、描述、版本和 token 上限字段均可缺失；模型列表返回 SDK 分页器，token 计算及图片生成返回宿主对象，均需等待。
+
+交互创建、读取、取消和删除同样返回异步结果；直接调用 `InteractionsHost` 方法也必须等待。删除响应在 SDK 中为未知类型，仍保留开放合同。
 
 ```cirru
 let
@@ -154,7 +159,7 @@ let
   println cache
 ```
 
-文件、缓存、模型元数据及异构原生 SDK 返回值仍是有意保留的 FFI Dynamic 边界；
+其他未建模的异构原生 SDK 返回值仍保留 FFI Dynamic 边界；
 本次没有把未建模的服务响应伪装成 Struct。按需要在真实使用位置检查/解码。
 
 ## 结果合同
