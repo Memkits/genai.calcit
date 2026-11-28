@@ -4,6 +4,11 @@
 
 ## 使用者影响
 
+`chat-send-message!` 等待 SDK 异步响应后返回 `GenerateResponseHost`；调用方应继续使用 `js-await`，可直接交给 `extract-text`。直接调用 `ChatHost.sendMessage` 时同样需要等待结果；消息输入仍保持原有开放合同。
+直接调用 `ChatsHost.create` 时请传入 SDK 请求对象（`JsObject`）；`chats-create` 的调用方式不变。
+
+`chat-send-message-stream!` 同样需要 `js-await`；结果为 SDK 返回的异步迭代器宿主对象（`JsObject`），迭代过程中得到的分块仍由 SDK 决定。请求失败继续通过 Promise 拒绝传递。
+
 候选 0.0.6 修复 token 计数的 HTTP 响应：`:sdkHttpResponse` 现在返回 `Option CountTokensHttpResponse`。`:host` 分支包含原 SDK 对象及经检查的标准 `ResponseHost`，可读取状态、响应头和 body；旧 Calcit Map 输入走 `:legacy` 分支并保留其 Map。原先把该字段当作 Map 读取的调用方需要适配分支。
 
 候选 0.0.5 将 `SdkUsage` 四类 `*_tokens_by_modality` 列表的条目从开放值改为 `ModalityTokenUsage`：`modality` 为 `Option String`、`tokens` 为 `Option Number`，原先从 Map 读取这两项的调用方需要改用结构字段。SDK 返回的其他条目字段保留在 `:extra` Map；已知字段类型错误会在解码时报告。

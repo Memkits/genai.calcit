@@ -253,8 +253,8 @@
         'ChatHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ChatHost
             .getHistory $ Fn genai.sdk/ChatHost $ -> JsObject
-            .sendMessage $ Fn genai.sdk/ChatHost Dynamic $ -> Dynamic
-            .sendMessageStream $ Fn genai.sdk/ChatHost Dynamic $ -> Dynamic
+            .sendMessage $ Fn genai.sdk/ChatHost JsObject (-> genai.sdk/GenerateResponseHost) (:async)
+            .sendMessageStream $ Fn genai.sdk/ChatHost JsObject (-> JsObject) (:async)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
@@ -264,7 +264,7 @@
           :schema $ quote UnionDef
         'ChatsHost $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait ChatsHost
-            .create $ Fn genai.sdk/ChatsHost Dynamic $ -> genai.sdk/ChatHost
+            .create $ Fn genai.sdk/ChatsHost JsObject $ -> genai.sdk/ChatHost
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object)
           :schema $ quote Trait
@@ -624,20 +624,20 @@
             :features :js-ffi
         'chat-send-message! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-send-message! (chat message config)
-            hint-fn $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
-            .sendMessage chat $ js-object
+            hint-fn $ Fn ChatHost Dynamic (Option GenerationConfig) (-> GenerateResponseHost) (:features :js-ffi) (:async)
+            js-await $ .sendMessage chat $ js-object
               :message $ maybe-to-js-data message
               :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn ChatHost Dynamic (Option GenerationConfig) (-> GenerateResponseHost) (:features :js-ffi) (:async)
         'chat-send-message-stream! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chat-send-message-stream! (chat message config)
-            hint-fn $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi) (:async)
-            .sendMessageStream chat $ js-object
+            hint-fn $ Fn ChatHost Dynamic (Option GenerationConfig) (-> JsObject) (:features :js-ffi) (:async)
+            js-await $ .sendMessageStream chat $ js-object
               :message $ maybe-to-js-data message
               :config $ option-map->js config generation-config->js
           :examples $ []
-          :schema $ quote $ Fn ChatHost Dynamic (Option GenerationConfig) (-> Dynamic) (:features :js-ffi)
+          :schema $ quote $ Fn ChatHost Dynamic (Option GenerationConfig) (-> JsObject) (:features :js-ffi) (:async)
         'chats-create $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn chats-create (client model config history)
             .create (.-chats client)

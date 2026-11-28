@@ -13,7 +13,7 @@
     "compile": "calcit calcit.cirru js",
     "compile:web": "calcit calcit.cirru --entry web js",
     "check:deprecated": "calcit calcit.cirru analyze weak-types --only deprecated-call --summary-only --format json",
-    "test:config": "calcit --entry test-config js && node --input-type=module -e 'import(\"./js-out/genai.test-config.mjs\").then(m => m.main_$x_())' && node scripts/test-count-tokens-http.mjs",
+    "test:config": "calcit --entry test-config js && node --input-type=module -e 'import(\"./js-out/genai.test-config.mjs\").then(m => m.main_$x_())' && node scripts/test-count-tokens-http.mjs && node scripts/test-chat-response.mjs",
     "build": "yarn compile:web && vite build",
     "dev": "yarn compile:web && vite",
     "watch": "calcit calcit.cirru --entry web js -w"
